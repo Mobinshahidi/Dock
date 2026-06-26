@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Palette ========================================= -->
+    <color name="bg_dark">#1e1e1d</color>
+    <color name="bg_dark_oled">#000000</color>
+    <color name="text_primary">#c3c2b7</color>
+    <color name="accent">#d57455</color>
+    <!-- Subtle step-up for widget containers -->
+    <color name="bg_surface">#2a2a28</color>
+    <!-- Scrim overlay for slideshow -->
+    <color name="scrim">#80000000</color>
+</resources>

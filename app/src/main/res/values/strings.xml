@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Dock</string>
+    <string name="settings_title">Dock Settings</string>
+
+    <!-- Toggle keys -->
+    <string name="pref_key_slideshow_enabled">slideshow_enabled</string>
+    <string name="pref_key_widgets_enabled">widgets_enabled</string>
+    <string name="pref_key_oled_mode">oled_mode</string>
+    <string name="pref_key_brightness">brightness_override</string>
+
+    <!-- Display section -->
+    <string name="section_display">Display</string>
+    <string name="pref_brightness_title">Brightness override</string>
+    <string name="pref_brightness_summary">Dim the display during screensaver</string>
+    <string name="pref_oled_title">OLED pure-black background</string>
+    <string name="pref_oled_summary">Use true black (#000000) instead of warm dark</string>
+
+    <!-- Slideshow section -->
+    <string name="section_slideshow">Photo Slideshow</string>
+    <string name="pref_slideshow_title">Enable slideshow</string>
+    <string name="pref_slideshow_summary">Show photos as ambient background while charging</string>
+
+    <!-- Widgets section -->
+    <string name="section_widgets">Widgets</string>
+    <string name="pref_widgets_title">Enable widgets</string>
+    <string name="pref_widgets_summary">Show 1–3 hosted Android widgets alongside the clock</string>
+
+    <!-- About -->
+    <string name="section_about">About</string>
+    <string name="about_license">Open source — Apache 2.0</string>
+    <string name="about_repo">github.com/nousresearch/dock</string>
+
+    <!-- TODO: Slideshow strings (Phase 3) -->
+    <string name="slideshow_interval">Interval</string>
+    <string name="slideshow_pick_photos">Pick photos</string>
+
+    <!-- TODO: Widget strings (Phase 4) -->
+    <string name="widget_add">Add widget</string>
+    <string name="widget_remove">Remove widget</string>
+</resources>

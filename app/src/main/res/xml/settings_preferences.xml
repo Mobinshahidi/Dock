@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ===== Display ===== -->
+    <PreferenceCategory
+        android:title="@string/section_display"
+        android:layout="@layout/preference_category_custom" />
+
+    <SwitchPreferenceCompat
+        android:key="@string/pref_key_oled_mode"
+        android:title="@string/pref_oled_title"
+        android:summary="@string/pref_oled_summary"
+        android:defaultValue="false" />
+
+    <!--
+        TODO (Phase 5): brightness slider + night auto-dim
+        <SeekBarPreference
+            android:key="@string/pref_key_brightness"
+            android:title="@string/pref_brightness_title"
+            android:summary="@string/pref_brightness_summary"
+            android:max="100"
+            android:defaultValue="80" />
+    -->
+
+    <!-- ===== Slideshow ===== -->
+    <PreferenceCategory
+        android:title="@string/section_slideshow"
+        android:layout="@layout/preference_category_custom" />
+
+    <SwitchPreferenceCompat
+        android:key="@string/pref_key_slideshow_enabled"
+        android:title="@string/pref_slideshow_title"
+        android:summary="@string/pref_slideshow_summary"
+        android:defaultValue="true" />
+
+    <!--
+        TODO (Phase 3): photo picker entry + interval selector
+        <Preference
+            android:key="pick_photos"
+            android:title="@string/slideshow_pick_photos" />
+        <ListPreference
+            android:key="slideshow_interval"
+            android:title="@string/slideshow_interval"
+            android:entries="@array/slideshow_interval_labels"
+            android:entryValues="@array/slideshow_interval_values"
+            android:defaultValue="30000" />
+    -->
+
+    <!-- ===== Widgets ===== -->
+    <PreferenceCategory
+        android:title="@string/section_widgets"
+        android:layout="@layout/preference_category_custom" />
+
+    <SwitchPreferenceCompat
+        android:key="@string/pref_key_widgets_enabled"
+        android:title="@string/pref_widgets_title"
+        android:summary="@string/pref_widgets_summary"
+        android:defaultValue="true" />
+
+    <!--
+        TODO (Phase 4): widget slot management
+        <Preference
+            android:key="manage_widgets"
+            android:title="@string/widget_add" />
+    -->
+
+    <!-- ===== About ===== -->
+    <PreferenceCategory
+        android:title="@string/section_about"
+        android:layout="@layout/preference_category_custom" />
+
+    <Preference
+        android:key="about_license"
+        android:title="@string/about_license"
+        android:summary="@string/about_repo"
+        android:selectable="false" />
+
+</PreferenceScreen>

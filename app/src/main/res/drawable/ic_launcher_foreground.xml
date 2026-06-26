@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Minimal Dock icon: thin rounded rectangle (dock) with accent line -->
+    <path
+        android:pathData="M14 54 L94 54 M14 54 L14 54"
+        android:strokeColor="#d57455"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+
+    <path
+        android:pathData="M14 54 L94 54 M94 54 L94 54"
+        android:strokeColor="#d57455"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+
+    <path
+        android:pathData="M24 38 L84 38 M24 38 L24 38"
+        android:strokeColor="#c3c2b7"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round" />
+
+    <path
+        android:pathData="M24 70 L84 70 M24 70 L24 70"
+        android:strokeColor="#c3c2b7"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round" />
+
+</vector>
