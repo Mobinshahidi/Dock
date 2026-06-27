@@ -50,9 +50,9 @@ class DockDreamService : DreamService() {
     private val widgetsEnabledConstraintSet = ConstraintSet()
     private val widgetsDisabledConstraintSet = ConstraintSet()
 
-    // Managers
-    private val slideshowManager = PhotoSlideshowManager.getInstance(this)
-    private val widgetHostManager = WidgetHostManager.getInstance(this)
+    // Managers (lazy — Service context not valid during construction)
+    private lateinit var slideshowManager: PhotoSlideshowManager
+    private lateinit var widgetHostManager: WidgetHostManager
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
@@ -83,7 +83,8 @@ class DockDreamService : DreamService() {
         slideshowBack = findViewById(R.id.slideshow_back)
         scrimOverlay = findViewById(R.id.scrim_overlay)
 
-        // Initialize slideshow manager with views
+        // Initialize managers (context is valid now)
+        slideshowManager = PhotoSlideshowManager.getInstance(this)
         slideshowManager.init(slideshowFront, slideshowBack, scrimOverlay)
 
         // --- Widget views ---
@@ -91,7 +92,7 @@ class DockDreamService : DreamService() {
         clockDisplay = findViewById(R.id.clock_display)
         dateDisplay = findViewById(R.id.date_display)
 
-        // Initialize widget host manager
+        widgetHostManager = WidgetHostManager.getInstance(this)
         widgetHostManager.init(widgetRail)
 
         // Build constraint sets for layout swap (widgets enabled/disabled)
