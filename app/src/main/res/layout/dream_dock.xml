@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Phase 1 — Dream content layout.
-  Center-aligned ConstraintLayout with clock and date.
-  Slideshow (photo background) and widget rail are TODO stubs
-  inserted via code in DockDreamService to allow dynamic
-  show/hide without re-inflating.
+  Phase 1 + 3 — Dream content layout.
+  Full-screen background: two ImageViews for crossfade + scrim overlay.
+  Clock and date float on top.
+  Widget rail (Phase 4) will be added as a separate group.
 -->
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -15,22 +14,44 @@
     android:keepScreenOn="true"
     android:background="@color/bg_dark">
 
-    <!--
-      TODO (Phase 3): Photo slideshow background
-      Replace the static background with a PhotoView or
-      ImageView that crossfades between user-selected photos,
-      with a semi-transparent black scrim overlay.
-    -->
+    <!-- ===== Slideshow background (Phase 3) ===== -->
+    <!-- Back ImageView (initially hidden) -->
+    <ImageView
+        android:id="@+id/slideshow_back"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <!--
-      TODO (Phase 3): Scrim overlay
-      <View android:id="@+id/scrim_overlay"
+    <!-- Front ImageView (shows current photo) -->
+    <ImageView
+        android:id="@+id/slideshow_front"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Scrim overlay (darkens photos for text legibility) -->
+    <View
+        android:id="@+id/scrim_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/scrim"
-        android:visibility="gone" />
-    -->
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- ===== Clock & Date (foreground content) ===== -->
     <!-- Clock — large, thin-weight, primary text color -->
     <TextClock
         android:id="@+id/clock_display"
@@ -63,8 +84,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/clock_display" />
 
+    <!-- ===== Widget rail placeholder (Phase 4) ===== -->
     <!--
-      TODO (Phase 4): Widget rail
       A horizontal LinearLayout or ConstraintLayout group
       on the right/bottom side containing 1–3 AppWidgetHostView
       slots. Each slot in a borderless rounded container with

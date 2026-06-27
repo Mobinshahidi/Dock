@@ -33,18 +33,18 @@
         android:summary="@string/pref_slideshow_summary"
         android:defaultValue="true" />
 
-    <!--
-        TODO (Phase 3): photo picker entry + interval selector
-        <Preference
-            android:key="pick_photos"
-            android:title="@string/slideshow_pick_photos" />
-        <ListPreference
-            android:key="slideshow_interval"
-            android:title="@string/slideshow_interval"
-            android:entries="@array/slideshow_interval_labels"
-            android:entryValues="@array/slideshow_interval_values"
-            android:defaultValue="30000" />
-    -->
+    <Preference
+        android:key="pick_photos"
+        android:title="@string/slideshow_pick_photos"
+        android:summary="@string/slideshow_no_photos" />
+
+    <ListPreference
+        android:key="@string/pref_key_slideshow_interval"
+        android:title="@string/slideshow_interval"
+        android:entries="@array/slideshow_interval_labels"
+        android:entryValues="@array/slideshow_interval_values"
+        android:defaultValue="60000"
+        android:dependency="@string/pref_key_slideshow_enabled" />
 
     <!-- ===== Widgets ===== -->
     <PreferenceCategory

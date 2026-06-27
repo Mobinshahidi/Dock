@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Slideshow interval: 30s, 1m, 5m -->
+    <string-array name="slideshow_interval_labels">
+        <item>30 seconds</item>
+        <item>1 minute</item>
+        <item>5 minutes</item>
+    </string-array>
+    <string-array name="slideshow_interval_values">
+        <item>30000</item>
+        <item>60000</item>
+        <item>300000</item>
+    </string-array>
+</resources>

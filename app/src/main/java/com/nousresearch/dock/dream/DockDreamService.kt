@@ -1,16 +1,20 @@
 package com.nousresearch.dock.dream
 
+import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import android.service.dreams.DreamService
+import android.util.Base64
 import android.view.View
 import android.view.WindowManager
+import android.widget.ImageView
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import com.nousresearch.dock.R
+import com.nousresearch.dock.slideshow.PhotoSlideshowManager
 
 /**
  * Dock dream service — the charging screensaver.
@@ -18,7 +22,7 @@ import com.nousresearch.dock.R
  * Phase 1: Shows a large clock + date on the custom dark background.
  * Phase 2: Reads slideshow_enabled and widgets_enabled toggles from
  *          SharedPreferences and shows/hides the respective modules.
- *          Currently both modules are TODO stubs.
+ * Phase 3: Integrates PhotoSlideshowManager for photo background with crossfade.
  *
  * The system handles auto-launch when charging (user selects Dock
  * in Settings → Display → Screen saver → While charging).
@@ -28,8 +32,13 @@ class DockDreamService : DreamService() {
     private lateinit var prefs: SharedPreferences
     private lateinit var rootLayout: ConstraintLayout
 
-    // Phase 3 TODO: PhotoSlideshowManager
-    // Phase 4 TODO: WidgetHostManager
+    // Slideshow views
+    private lateinit var slideshowFront: ImageView
+    private lateinit var slideshowBack: ImageView
+    private lateinit var scrimOverlay: View
+
+    // Slideshow manager
+    private val slideshowManager = PhotoSlideshowManager.getInstance(this)
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
@@ -56,6 +65,14 @@ class DockDreamService : DreamService() {
         setContentView(R.layout.dream_dock)
         rootLayout = findViewById(R.id.dream_root)
 
+        // --- Slideshow views ---
+        slideshowFront = findViewById(R.id.slideshow_front)
+        slideshowBack = findViewById(R.id.slideshow_back)
+        scrimOverlay = findViewById(R.id.scrim_overlay)
+
+        // Initialize slideshow manager with views
+        slideshowManager.init(slideshowFront, slideshowBack, scrimOverlay)
+
         applyBackgroundColor()
         applyBrightnessOverride()
         loadModuleStates()
@@ -65,16 +82,17 @@ class DockDreamService : DreamService() {
         super.onDreamingStarted()
         // Read toggles at launch (settings changes take effect next launch)
         loadModuleStates()
+        startSlideshowIfEnabled()
     }
 
     override fun onDreamingStopped() {
         super.onDreamingStopped()
-        // Phase 3: pause slideshow
+        slideshowManager.stop()
         // Phase 4: release widget host
     }
 
     // ------------------------------------------------------------------
-    // Phase 2 — Toggle-aware module loading
+    // Module state management
     // ------------------------------------------------------------------
 
     private fun loadModuleStates() {
@@ -85,12 +103,48 @@ class DockDreamService : DreamService() {
             getString(R.string.pref_key_widgets_enabled), true
         )
 
-        // TODO (Phase 3): manage slideshow visibility
-        // TODO (Phase 4): manage widget rail visibility + clock re-centering
+        // Slideshow
+        slideshowManager.setEnabled(slideshowEnabled)
+        if (slideshowEnabled) {
+            loadPersistedPhotoUris()
+        }
 
-        // For Phase 1 + 2 we just acknowledge the toggles.
-        // In Phases 3–4 these will control actual view visibility
-        // and layout constraint adjustments via ConstraintSet.
+        // TODO (Phase 4): manage widget rail visibility + clock re-centering
+    }
+
+    private fun startSlideshowIfEnabled() {
+        if (slideshowManager.isEnabled()) {
+            slideshowManager.start()
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Slideshow persistence
+    // ------------------------------------------------------------------
+
+    /**
+     * Load persisted photo URIs from SharedPreferences.
+     * Stored as pipe-separated URI strings.
+     */
+    private fun loadPersistedPhotoUris() {
+        val uriString = prefs.getString("slideshow_photo_uris", "") ?: ""
+        if (uriString.isNotEmpty()) {
+            val uris = uriString.split("|").map { Uri.parse(it) }
+            if (uris.isNotEmpty()) {
+                slideshowManager.setPhotoUris(uris)
+            }
+        }
+    }
+
+    /** Persist photo URIs (called from SettingsActivity after picker). */
+    internal fun persistPhotoUris(uris: List<Uri>) {
+        val uriString = uris.map { it.toString() }.joinToString("|")
+        prefs.edit().putString("slideshow_photo_uris", uriString).apply()
+        // Reload in slideshow manager
+        slideshowManager.setPhotoUris(uris)
+        if (slideshowManager.isEnabled()) {
+            slideshowManager.start()
+        }
     }
 
     // ------------------------------------------------------------------

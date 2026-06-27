@@ -8,6 +8,7 @@
     <string name="pref_key_widgets_enabled">widgets_enabled</string>
     <string name="pref_key_oled_mode">oled_mode</string>
     <string name="pref_key_brightness">brightness_override</string>
+    <string name="pref_key_slideshow_interval">slideshow_interval</string>
 
     <!-- Display section -->
     <string name="section_display">Display</string>
@@ -20,6 +21,10 @@
     <string name="section_slideshow">Photo Slideshow</string>
     <string name="pref_slideshow_title">Enable slideshow</string>
     <string name="pref_slideshow_summary">Show photos as ambient background while charging</string>
+    <string name="slideshow_interval">Interval</string>
+    <string name="slideshow_pick_photos">Pick photos</string>
+    <string name="slideshow_no_photos">No photos selected</string>
+    <string name="slideshow_photos_selected">%d photos selected</string>
 
     <!-- Widgets section -->
     <string name="section_widgets">Widgets</string>
@@ -31,11 +36,7 @@
     <string name="about_license">Open source — Apache 2.0</string>
     <string name="about_repo">github.com/nousresearch/dock</string>
 
-    <!-- TODO: Slideshow strings (Phase 3) -->
-    <string name="slideshow_interval">Interval</string>
-    <string name="slideshow_pick_photos">Pick photos</string>
-
-    <!-- TODO: Widget strings (Phase 4) -->
+    <!-- Widget strings (Phase 4) -->
     <string name="widget_add">Add widget</string>
     <string name="widget_remove">Remove widget</string>
 </resources>
