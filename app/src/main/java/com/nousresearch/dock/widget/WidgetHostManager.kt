@@ -164,7 +164,7 @@ class WidgetHostManager private constructor(
         // Bind the widget
         try {
             appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, provider)
-            val info = appWidgetManager.getAppWidgetProviderInfo(provider) ?: run {
+            val info = appWidgetManager.getAppWidgetProviderInfo(appWidgetId) ?: run {
                 appWidgetHost.deleteAppWidgetId(appWidgetId)
                 return
             }
@@ -241,7 +241,7 @@ class WidgetHostManager private constructor(
         if (flattened != null && appWidgetId != -1) {
             val provider = ComponentName.unflattenFromString(flattened)
             if (provider != null && appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, provider)) {
-                val info = appWidgetManager.getAppWidgetProviderInfo(provider) ?: run {
+                val info = appWidgetManager.getAppWidgetProviderInfo(appWidgetId) ?: run {
                     clearPersistedWidget(slotIndex)
                     return
                 }
