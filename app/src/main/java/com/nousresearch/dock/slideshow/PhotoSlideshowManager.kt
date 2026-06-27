@@ -174,7 +174,7 @@ class PhotoSlideshowManager private constructor(
         val fromView = if (isFrontShowing) frontImageView else backImageView
         val toView = if (isFrontShowing) backImageView else frontImageView
 
-        fromView?.animate().alpha(0f).setDuration(500).start()
+        fromView?.animate()?.alpha(0f)?.setDuration(500)?.start()
         toView?.alpha = 1f
         toView?.visibility = View.VISIBLE
 

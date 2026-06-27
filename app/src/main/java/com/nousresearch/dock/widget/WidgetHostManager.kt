@@ -164,7 +164,11 @@ class WidgetHostManager private constructor(
         // Bind the widget
         try {
             appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, provider)
-            val hostView = appWidgetHost.createView(context, appWidgetId, provider)
+            val info = appWidgetManager.getAppWidgetProviderInfo(provider) ?: run {
+                appWidgetHost.deleteAppWidgetId(appWidgetId)
+                return
+            }
+            val hostView = appWidgetHost.createView(context, appWidgetId, info)
             hostView.layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -237,7 +241,11 @@ class WidgetHostManager private constructor(
         if (flattened != null && appWidgetId != -1) {
             val provider = ComponentName.unflattenFromString(flattened)
             if (provider != null && appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, provider)) {
-                val hostView = appWidgetHost.createView(context, appWidgetId, provider)
+                val info = appWidgetManager.getAppWidgetProviderInfo(provider) ?: run {
+                    clearPersistedWidget(slotIndex)
+                    return
+                }
+                val hostView = appWidgetHost.createView(context, appWidgetId, info)
                 hostView.layoutParams = FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT

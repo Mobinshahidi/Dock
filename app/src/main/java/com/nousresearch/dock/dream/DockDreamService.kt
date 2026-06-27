@@ -60,7 +60,6 @@ class DockDreamService : DreamService() {
         setInteractive(false)        // touch dismisses
         setFullscreen(true)          // hide system bars
         setScreenBright(false)       // respect brightness override
-        isWindowless = false
 
         // Hide decor
         window?.decorView?.systemUiVisibility = (
@@ -108,13 +107,13 @@ class DockDreamService : DreamService() {
         // Read toggles at launch (settings changes take effect next launch)
         loadModuleStates()
         startSlideshowIfEnabled()
-        widgetHostManager.onDreamingStarted()
+        widgetHostManager.start()
     }
 
     override fun onDreamingStopped() {
         super.onDreamingStopped()
         slideshowManager.stop()
-        widgetHostManager.onDreamingStopped()
+        widgetHostManager.stop()
     }
 
     // ------------------------------------------------------------------

@@ -1,5 +1,6 @@
 package com.nousresearch.dock.settings
 
+import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.ContentResolver
 import android.content.Context
@@ -7,7 +8,6 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.ListPreference
@@ -40,9 +40,9 @@ class SettingsActivity : AppCompatActivity() {
 
     class DockSettingsFragment : PreferenceFragmentCompat() {
 
-        // Photo picker launcher (API 30+ for PickMultipleVisualMedia)
+        // Photo picker launcher
         private val pickPhotosLauncher =
-            registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
+            registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
                 if (uris.isNotEmpty()) {
                     persistPhotoUris(uris)
                     updatePickPhotosSummary(uris.size)
@@ -166,11 +166,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         private fun launchPhotoPicker() {
-            pickPhotosLauncher.launch(
-                ActivityResultContracts.PickVisualMedia.PickVisualMediaRequest(
-                    mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE
-                )
-            )
+            pickPhotosLauncher.launch("image/*")
         }
 
         private fun persistPhotoUris(uris: List<Uri>) {
@@ -210,7 +206,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         private fun updatePickPhotosSummaryFromPrefs(prefs: SharedPreferences) {
-            val uriString = prefs.getString("slideshow_photo_uris", "")
+            val uriString = prefs.getString("slideshow_photo_uris", "") ?: ""
             val count = if (uriString.isNotEmpty()) uriString.split("|").size else 0
             updatePickPhotosSummary(count)
         }
