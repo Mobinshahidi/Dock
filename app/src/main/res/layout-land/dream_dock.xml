@@ -42,7 +42,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Clock & Date — centered horizontally, top half -->
+    <!-- Clock & Date — left side, vertically centered -->
     <TextClock
         android:id="@+id/clock_display"
         android:layout_width="wrap_content"
@@ -52,12 +52,12 @@
         android:textSize="@dimen/clock_text_size"
         android:format12Hour="hh:mm"
         android:format24Hour="HH:mm"
+        android:layout_marginStart="48dp"
         app:layout_constraintBottom_toTopOf="@+id/date_display"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_chainStyle="packed"
-        app:layout_constraintVertical_bias="0.45" />
+        app:layout_constraintVertical_bias="0.5" />
 
     <TextClock
         android:id="@+id/date_display"
@@ -69,22 +69,24 @@
         android:alpha="0.6"
         android:format12Hour="EEEE, MMMM d"
         android:format24Hour="EEEE, MMMM d"
-        app:layout_constraintBottom_toTopOf="@+id/widget_rail"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginStart="48dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/widget_rail"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/clock_display" />
 
-    <!-- Widget rail — horizontal, at bottom -->
+    <!-- Widget rail — vertical, right side -->
     <LinearLayout
         android:id="@+id/widget_rail"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:layout_height="0dp"
+        android:orientation="vertical"
         android:padding="12dp"
-        android:gravity="center"
+        android:gravity="center_vertical"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.35" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

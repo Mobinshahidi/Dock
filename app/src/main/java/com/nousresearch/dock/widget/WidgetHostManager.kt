@@ -8,6 +8,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -165,8 +166,7 @@ class WidgetHostManager private constructor(
         // Bind the widget
         try {
             appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, provider)
-            val info = appWidgetManager.getInstalledProviders()
-                .firstOrNull { it.provider == provider } ?: run {
+            val info = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: run {
                 appWidgetHost.deleteAppWidgetId(appWidgetId)
                 return
             }
@@ -201,15 +201,35 @@ class WidgetHostManager private constructor(
 
     private fun createSlotViews() {
         widgetRail?.removeAllViews()
-        val params = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            0,
-            1f
-        )
+        val isLandscape = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val spacingPx = (12 * context.resources.displayMetrics.density).toInt()
+
+        if (isLandscape) {
+            widgetRail?.orientation = LinearLayout.VERTICAL
+        } else {
+            widgetRail?.orientation = LinearLayout.HORIZONTAL
+        }
 
         for (i in 0 until slotCount) {
+            val lp = if (isLandscape) {
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    0,
+                    1f
+                )
+            } else {
+                LinearLayout.LayoutParams(
+                    0,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    1f
+                )
+            }
+            if (i < slotCount - 1) {
+                if (isLandscape) lp.bottomMargin = spacingPx
+                else lp.marginEnd = spacingPx
+            }
             val slotContainer = FrameLayout(context).apply {
-                layoutParams = params
+                layoutParams = lp
                 setBackgroundResource(R.drawable.widget_slot_background)
                 clipToOutline = true
                 visibility = if (isEnabled) View.VISIBLE else View.GONE
@@ -243,8 +263,7 @@ class WidgetHostManager private constructor(
         if (flattened != null && appWidgetId != -1) {
             val provider = ComponentName.unflattenFromString(flattened)
             if (provider != null && appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, provider)) {
-                val info = appWidgetManager.getInstalledProviders()
-                    .firstOrNull { it.provider == provider } ?: run {
+                val info = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: run {
                     clearPersistedWidget(slotIndex)
                     return
                 }

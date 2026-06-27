@@ -156,51 +156,10 @@ class DockDreamService : DreamService() {
     }
 
     private fun buildConstraintSets() {
-        // Clone current layout as baseline
-        val baseSet = ConstraintSet()
-        baseSet.clone(rootLayout)
-
-        // Widgets ENABLED: clock constrained to start of parent and end of widget_rail
         widgetsEnabledConstraintSet.clone(rootLayout)
-        // Clock: start to parent start, end to widget_rail start
-        widgetsEnabledConstraintSet.connect(
-            R.id.clock_display, ConstraintSet.START,
-            R.id.dream_root, ConstraintSet.START, 0
-        )
-        widgetsEnabledConstraintSet.connect(
-            R.id.clock_display, ConstraintSet.END,
-            R.id.widget_rail, ConstraintSet.START, 0
-        )
-        widgetsEnabledConstraintSet.connect(
-            R.id.date_display, ConstraintSet.START,
-            R.id.dream_root, ConstraintSet.START, 0
-        )
-        widgetsEnabledConstraintSet.connect(
-            R.id.date_display, ConstraintSet.END,
-            R.id.widget_rail, ConstraintSet.START, 0
-        )
-        // Widget rail visible
         widgetsEnabledConstraintSet.setVisibility(R.id.widget_rail, View.VISIBLE)
 
-        // Widgets DISABLED: clock centered (start to parent, end to parent)
         widgetsDisabledConstraintSet.clone(rootLayout)
-        widgetsDisabledConstraintSet.connect(
-            R.id.clock_display, ConstraintSet.START,
-            R.id.dream_root, ConstraintSet.START, 0
-        )
-        widgetsDisabledConstraintSet.connect(
-            R.id.clock_display, ConstraintSet.END,
-            R.id.dream_root, ConstraintSet.END, 0
-        )
-        widgetsDisabledConstraintSet.connect(
-            R.id.date_display, ConstraintSet.START,
-            R.id.dream_root, ConstraintSet.START, 0
-        )
-        widgetsDisabledConstraintSet.connect(
-            R.id.date_display, ConstraintSet.END,
-            R.id.dream_root, ConstraintSet.END, 0
-        )
-        // Widget rail gone
         widgetsDisabledConstraintSet.setVisibility(R.id.widget_rail, View.GONE)
     }
 
