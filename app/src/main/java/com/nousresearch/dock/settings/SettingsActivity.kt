@@ -40,9 +40,9 @@ class SettingsActivity : AppCompatActivity() {
 
     class DockSettingsFragment : PreferenceFragmentCompat() {
 
-        // Photo picker launcher
+        // Photo picker launcher (OpenMultipleDocuments for persistable permissions)
         private val pickPhotosLauncher =
-            registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+            registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
                 if (uris.isNotEmpty()) {
                     persistPhotoUris(uris)
                     updatePickPhotosSummary(uris.size)
@@ -160,7 +160,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         private fun launchPhotoPicker() {
-            pickPhotosLauncher.launch("image/*")
+            pickPhotosLauncher.launch(arrayOf("image/*"))
         }
 
         private fun persistPhotoUris(uris: List<Uri>) {
