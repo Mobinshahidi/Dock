@@ -9,8 +9,8 @@ import android.service.dreams.DreamService
 import android.util.Base64
 import android.view.View
 import android.view.WindowManager
-import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.edit
@@ -42,7 +42,7 @@ class DockDreamService : DreamService() {
     private lateinit var scrimOverlay: View
 
     // Widget views
-    private lateinit var widgetRail: FrameLayout
+    private lateinit var widgetRail: LinearLayout
     private lateinit var clockDisplay: android.widget.TextClock
     private lateinit var dateDisplay: android.widget.TextClock
 
