@@ -10,6 +10,9 @@
     <string name="pref_key_brightness">brightness_override</string>
     <string name="pref_key_slideshow_interval">slideshow_interval</string>
     <string name="pref_key_widget_slot_count">widget_slot_count</string>
+    <string name="pref_key_night_dim">night_dim_enabled</string>
+    <string name="pref_key_night_dim_start">night_dim_start</string>
+    <string name="pref_key_night_dim_end">night_dim_end</string>
 
     <!-- Display section -->
     <string name="section_display">Display</string>
@@ -17,6 +20,12 @@
     <string name="pref_brightness_summary">Dim the display during screensaver</string>
     <string name="pref_oled_title">OLED pure-black background</string>
     <string name="pref_oled_summary">Use true black (#000000) instead of warm dark</string>
+    <string name="pref_night_dim_title">Night auto-dim</string>
+    <string name="pref_night_dim_summary">Automatically dim and tint accent at night</string>
+    <string name="pref_night_dim_start_title">Night start</string>
+    <string name="pref_night_dim_start_summary">When to start night mode</string>
+    <string name="pref_night_dim_end_title">Night end</string>
+    <string name="pref_night_dim_end_summary">When to end night mode</string>
 
     <!-- Slideshow section -->
     <string name="section_slideshow">Photo Slideshow</string>

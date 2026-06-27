@@ -12,15 +12,29 @@
         android:summary="@string/pref_oled_summary"
         android:defaultValue="false" />
 
-    <!--
-        TODO (Phase 5): brightness slider + night auto-dim
-        <SeekBarPreference
-            android:key="@string/pref_key_brightness"
-            android:title="@string/pref_brightness_title"
-            android:summary="@string/pref_brightness_summary"
-            android:max="100"
-            android:defaultValue="80" />
-    -->
+    <SwitchPreferenceCompat
+        android:key="@string/pref_key_night_dim"
+        android:title="@string/pref_night_dim_title"
+        android:summary="@string/pref_night_dim_summary"
+        android:defaultValue="true" />
+
+    <ListPreference
+        android:key="@string/pref_key_night_dim_start"
+        android:title="@string/pref_night_dim_start_title"
+        android:summary="@string/pref_night_dim_start_summary"
+        android:entries="@array/night_dim_time_labels"
+        android:entryValues="@array/night_dim_time_values"
+        android:defaultValue="22"
+        android:dependency="@string/pref_key_night_dim" />
+
+    <ListPreference
+        android:key="@string/pref_key_night_dim_end"
+        android:title="@string/pref_night_dim_end_title"
+        android:summary="@string/pref_night_dim_end_summary"
+        android:entries="@array/night_dim_end_time_labels"
+        android:entryValues="@array/night_dim_end_time_values"
+        android:defaultValue="7"
+        android:dependency="@string/pref_key_night_dim" />
 
     <!-- ===== Slideshow ===== -->
     <PreferenceCategory
