@@ -2,8 +2,7 @@
 
 A native Android screensaver (DreamService) inspired by the *functionality* of iOS StandBy mode — clock, live widgets, optional photo background, auto-activates while charging — with its own **original minimal/futuristic visual identity**.
 
-> **Status:** Phase 1 + 2 complete (skeleton + settings toggles).  
-> **Phases 3–5** (slideshow, widgets, polish) are stubbed with `TODO` comments.
+> **Status:** All phases complete (DreamService, settings, slideshow, widgets, polish).
 
 ---
 
@@ -13,9 +12,9 @@ A native Android screensaver (DreamService) inspired by the *functionality* of i
 |-------|---------|--------|
 | 1 | DreamService registers as system screensaver; clock + date on warm dark background | ✅ Done |
 | 2 | Settings screen with `slideshow_enabled` / `widgets_enabled` toggles | ✅ Done |
-| 3 | Photo slideshow: picker, crossfade, scrim overlay, interval | ⏳ TODO |
-| 4 | Live widgets: `AppWidgetHost` integration, slot management, layout resize | ⏳ TODO |
-| 5 | Night auto-dim (accent tint), animations, app icon, F-Droid metadata | ⏳ TODO |
+| 3 | Photo slideshow: picker, crossfade, scrim overlay, interval | ✅ Done |
+| 4 | Live widgets: `AppWidgetHost` integration, slot management, layout resize | ✅ Done |
+| 5 | Night auto-dim (accent tint), animations, app icon, F-Droid metadata | ✅ Done |
 
 ---
 
@@ -64,8 +63,8 @@ Dock/
 │   │   ├── java/com/nousresearch/dock/
 │   │   │   ├── dream/           # DreamService + content
 │   │   │   ├── settings/        # SettingsActivity + prefs
-│   │   │   ├── slideshow/       # Phase 3 — TODO stub
-│   │   │   └── widget/          # Phase 4 — TODO stub
+│   │   │   ├── slideshow/       # PhotoSlideshowManager — crossfade engine
+│   │   │   └── widget/          # WidgetHostManager — AppWidgetHost integration
 │   │   ├── res/
 │   │   │   ├── layout/
 │   │   │   │   ├── dream_dock.xml
