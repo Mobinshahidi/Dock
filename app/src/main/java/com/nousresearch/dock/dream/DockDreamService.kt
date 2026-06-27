@@ -9,12 +9,15 @@ import android.service.dreams.DreamService
 import android.util.Base64
 import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import com.nousresearch.dock.R
 import com.nousresearch.dock.slideshow.PhotoSlideshowManager
+import com.nousresearch.dock.widget.WidgetHostManager
 
 /**
  * Dock dream service — the charging screensaver.
@@ -23,6 +26,7 @@ import com.nousresearch.dock.slideshow.PhotoSlideshowManager
  * Phase 2: Reads slideshow_enabled and widgets_enabled toggles from
  *          SharedPreferences and shows/hides the respective modules.
  * Phase 3: Integrates PhotoSlideshowManager for photo background with crossfade.
+ * Phase 4: Integrates WidgetHostManager with ConstraintSet layout swap.
  *
  * The system handles auto-launch when charging (user selects Dock
  * in Settings → Display → Screen saver → While charging).
@@ -37,8 +41,18 @@ class DockDreamService : DreamService() {
     private lateinit var slideshowBack: ImageView
     private lateinit var scrimOverlay: View
 
-    // Slideshow manager
+    // Widget views
+    private lateinit var widgetRail: FrameLayout
+    private lateinit var clockDisplay: android.widget.TextClock
+    private lateinit var dateDisplay: android.widget.TextClock
+
+    // ConstraintSets for layout swap
+    private val widgetsEnabledConstraintSet = ConstraintSet()
+    private val widgetsDisabledConstraintSet = ConstraintSet()
+
+    // Managers
     private val slideshowManager = PhotoSlideshowManager.getInstance(this)
+    private val widgetHostManager = WidgetHostManager.getInstance(this)
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
@@ -73,6 +87,17 @@ class DockDreamService : DreamService() {
         // Initialize slideshow manager with views
         slideshowManager.init(slideshowFront, slideshowBack, scrimOverlay)
 
+        // --- Widget views ---
+        widgetRail = findViewById(R.id.widget_rail)
+        clockDisplay = findViewById(R.id.clock_display)
+        dateDisplay = findViewById(R.id.date_display)
+
+        // Initialize widget host manager
+        widgetHostManager.init(widgetRail)
+
+        // Build constraint sets for layout swap (widgets enabled/disabled)
+        buildConstraintSets()
+
         applyBackgroundColor()
         applyBrightnessOverride()
         loadModuleStates()
@@ -83,12 +108,13 @@ class DockDreamService : DreamService() {
         // Read toggles at launch (settings changes take effect next launch)
         loadModuleStates()
         startSlideshowIfEnabled()
+        widgetHostManager.onDreamingStarted()
     }
 
     override fun onDreamingStopped() {
         super.onDreamingStopped()
         slideshowManager.stop()
-        // Phase 4: release widget host
+        widgetHostManager.onDreamingStopped()
     }
 
     // ------------------------------------------------------------------
@@ -109,13 +135,73 @@ class DockDreamService : DreamService() {
             loadPersistedPhotoUris()
         }
 
-        // TODO (Phase 4): manage widget rail visibility + clock re-centering
+        // Widgets
+        widgetHostManager.setEnabled(widgetsEnabled)
+        applyWidgetLayout(widgetsEnabled)
     }
 
     private fun startSlideshowIfEnabled() {
         if (slideshowManager.isEnabled()) {
             slideshowManager.start()
         }
+    }
+
+    private fun applyWidgetLayout(widgetsEnabled: Boolean) {
+        val constraintSet = if (widgetsEnabled) {
+            widgetsEnabledConstraintSet
+        } else {
+            widgetsDisabledConstraintSet
+        }
+        constraintSet.applyTo(rootLayout)
+    }
+
+    private fun buildConstraintSets() {
+        // Clone current layout as baseline
+        val baseSet = ConstraintSet()
+        baseSet.clone(rootLayout)
+
+        // Widgets ENABLED: clock constrained to start of parent and end of widget_rail
+        widgetsEnabledConstraintSet.clone(rootLayout)
+        // Clock: start to parent start, end to widget_rail start
+        widgetsEnabledConstraintSet.connect(
+            R.id.clock_display, ConstraintSet.START,
+            R.id.dream_root, ConstraintSet.START, 0
+        )
+        widgetsEnabledConstraintSet.connect(
+            R.id.clock_display, ConstraintSet.END,
+            R.id.widget_rail, ConstraintSet.START, 0
+        )
+        widgetsEnabledConstraintSet.connect(
+            R.id.date_display, ConstraintSet.START,
+            R.id.dream_root, ConstraintSet.START, 0
+        )
+        widgetsEnabledConstraintSet.connect(
+            R.id.date_display, ConstraintSet.END,
+            R.id.widget_rail, ConstraintSet.START, 0
+        )
+        // Widget rail visible
+        widgetsEnabledConstraintSet.setVisibility(R.id.widget_rail, View.VISIBLE)
+
+        // Widgets DISABLED: clock centered (start to parent, end to parent)
+        widgetsDisabledConstraintSet.clone(rootLayout)
+        widgetsDisabledConstraintSet.connect(
+            R.id.clock_display, ConstraintSet.START,
+            R.id.dream_root, ConstraintSet.START, 0
+        )
+        widgetsDisabledConstraintSet.connect(
+            R.id.clock_display, ConstraintSet.END,
+            R.id.dream_root, ConstraintSet.END, 0
+        )
+        widgetsDisabledConstraintSet.connect(
+            R.id.date_display, ConstraintSet.START,
+            R.id.dream_root, ConstraintSet.START, 0
+        )
+        widgetsDisabledConstraintSet.connect(
+            R.id.date_display, ConstraintSet.END,
+            R.id.dream_root, ConstraintSet.END, 0
+        )
+        // Widget rail gone
+        widgetsDisabledConstraintSet.setVisibility(R.id.widget_rail, View.GONE)
     }
 
     // ------------------------------------------------------------------

@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Phase 1 + 3 — Dream content layout.
+  Phase 1 + 3 + 4 — Dream content layout.
   Full-screen background: two ImageViews for crossfade + scrim overlay.
-  Clock and date float on top.
-  Widget rail (Phase 4) will be added as a separate group.
+  Clock and date float on top (left/center).
+  Widget rail (Phase 4) on the right side with 1-3 slots.
+  Two layout states managed by ConstraintSet:
+    - widgets_enabled=true: clock left, widget rail right
+    - widgets_enabled=false: clock centered, no rail
 -->
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -51,6 +54,57 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- ===== Widget Rail (Phase 4) ===== -->
+    <!-- Container for 1-3 widget slots, on the right side -->
+    <LinearLayout
+        android:id="@+id/widget_rail"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:gravity="center_vertical"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.35">
+
+        <!-- Widget Slot 1 -->
+        <FrameLayout
+            android:id="@+id/widget_slot_1"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/widget_slot_background"
+            android:padding="8dp"
+            android:clipToPadding="false" />
+
+        <!-- Widget Slot 2 -->
+        <FrameLayout
+            android:id="@+id/widget_slot_2"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/widget_slot_background"
+            android:padding="8dp"
+            android:clipToPadding="false"
+            android:visibility="gone" />
+
+        <!-- Widget Slot 3 -->
+        <FrameLayout
+            android:id="@+id/widget_slot_3"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_slot_background"
+            android:padding="8dp"
+            android:clipToPadding="false"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
     <!-- ===== Clock & Date (foreground content) ===== -->
     <!-- Clock — large, thin-weight, primary text color -->
     <TextClock
@@ -63,7 +117,7 @@
         android:format12Hour="hh:mm"
         android:format24Hour="HH:mm"
         app:layout_constraintBottom_toTopOf="@+id/date_display"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/widget_rail"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_chainStyle="packed" />
@@ -80,18 +134,8 @@
         android:format12Hour="EEEE, MMMM d"
         android:format24Hour="EEEE, MMMM d"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/widget_rail"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/clock_display" />
-
-    <!-- ===== Widget rail placeholder (Phase 4) ===== -->
-    <!--
-      A horizontal LinearLayout or ConstraintLayout group
-      on the right/bottom side containing 1–3 AppWidgetHostView
-      slots. Each slot in a borderless rounded container with
-      @color/bg_surface background.
-      When disabled (widgets_enabled=false), this entire group
-      is removed from layout and clock recenters/scales up.
-    -->
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -11,4 +11,16 @@
         <item>60000</item>
         <item>300000</item>
     </string-array>
+
+    <!-- Widget slot count: 1, 2, 3 -->
+    <string-array name="widget_slot_count_labels">
+        <item>1 slot</item>
+        <item>2 slots</item>
+        <item>3 slots</item>
+    </string-array>
+    <string-array name="widget_slot_count_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
 </resources>

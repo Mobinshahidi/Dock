@@ -57,12 +57,33 @@
         android:summary="@string/pref_widgets_summary"
         android:defaultValue="true" />
 
-    <!--
-        TODO (Phase 4): widget slot management
-        <Preference
-            android:key="manage_widgets"
-            android:title="@string/widget_add" />
-    -->
+    <ListPreference
+        android:key="@string/pref_key_widget_slot_count"
+        android:title="@string/widget_slot_count"
+        android:entries="@array/widget_slot_count_labels"
+        android:entryValues="@array/widget_slot_count_values"
+        android:defaultValue="1"
+        android:dependency="@string/pref_key_widgets_enabled" />
+
+    <Preference
+        android:key="manage_slot_1"
+        android:title="@string/widget_manage_slot"
+        android:summary="@string/widget_pick_for_slot"
+        android:dependency="@string/pref_key_widgets_enabled" />
+
+    <Preference
+        android:key="manage_slot_2"
+        android:title="@string/widget_manage_slot"
+        android:summary="@string/widget_pick_for_slot"
+        android:dependency="@string/pref_key_widgets_enabled"
+        android:visible="false" />
+
+    <Preference
+        android:key="manage_slot_3"
+        android:title="@string/widget_manage_slot"
+        android:summary="@string/widget_pick_for_slot"
+        android:dependency="@string/pref_key_widgets_enabled"
+        android:visible="false" />
 
     <!-- ===== About ===== -->
     <PreferenceCategory

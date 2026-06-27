@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget slot background: subtle elevation using a slightly lighter background.
+  No drop shadows — just a 4-6% lightness step from bg_dark (#1e1e1d -> #2a2a28).
+  Rounded corners, no border.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/bg_surface" />
+    <corners android:radius="12dp" />
+</shape>
