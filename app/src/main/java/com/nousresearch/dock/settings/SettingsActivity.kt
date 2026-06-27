@@ -2,6 +2,7 @@ package com.nousresearch.dock.settings
 
 import android.app.Activity
 import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
@@ -61,13 +62,13 @@ class SettingsActivity : AppCompatActivity() {
                         // Bound directly
                     } else {
                         // Need ACTION_REQUEST_BIND_APPWIDGET
-                        pendingWidgetProvider = result.data?.getParcelableExtra(
+                        pendingWidgetProvider = result.data?.getParcelableExtra<ComponentName>(
                             AppWidgetManager.EXTRA_APPWIDGET_PROVIDER
                         )
                         if (pendingWidgetProvider != null) {
                             val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND)
                                 .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId)
-                                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, pendingWidgetProvider)
+                                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, pendingWidgetProvider as android.os.Parcelable)
                             bindWidgetLauncher.launch(intent)
                         } else {
                             manager.cleanupWidgetId(pendingWidgetId)
