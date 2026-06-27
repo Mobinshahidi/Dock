@@ -204,10 +204,8 @@ class WidgetHostManager private constructor(
         val isLandscape = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val spacingPx = (12 * context.resources.displayMetrics.density).toInt()
 
-        if (isLandscape) {
-            widgetRail?.orientation = LinearLayout.VERTICAL
-        } else {
-            widgetRail?.orientation = LinearLayout.HORIZONTAL
+        (widgetRail as? LinearLayout)?.let {
+            it.orientation = if (isLandscape) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
         }
 
         for (i in 0 until slotCount) {
