@@ -12,6 +12,7 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import androidx.annotation.VisibleForTesting
 import com.nousresearch.dock.R
 
@@ -200,13 +201,13 @@ class WidgetHostManager private constructor(
 
     private fun createSlotViews() {
         widgetRail?.removeAllViews()
-        val params = ViewGroup.LayoutParams(
+        val params = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
+            0,
+            1f
         )
 
         for (i in 0 until slotCount) {
-            // Slot container: rounded, bg_surface background, no shadow
             val slotContainer = FrameLayout(context).apply {
                 layoutParams = params
                 setBackgroundResource(R.drawable.widget_slot_background)

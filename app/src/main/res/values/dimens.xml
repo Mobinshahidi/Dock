@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="clock_text_size">120sp</dimen>
+    <dimen name="date_text_size">18sp</dimen>
+    <dimen name="clock_margin_start">48dp</dimen>
+    <dimen name="widget_rail_width_percent">0.35</dimen>
+</resources>

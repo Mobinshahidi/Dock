@@ -51,24 +51,20 @@ class SettingsActivity : AppCompatActivity() {
 
         // Widget picker launcher
         private var pendingWidgetSlot = -1
+        private var pendingWidgetId = -1
         private val pickWidgetLauncher =
             registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                 if (result.resultCode == Activity.RESULT_OK && pendingWidgetSlot != -1) {
-                    val appWidgetId = WidgetHostManager.getInstance(requireContext())
-                        .allocateWidgetIdForSlot(pendingWidgetSlot)
-                    // Actually we need to get the appWidgetId that was allocated before launching
-                    // Let's use a different approach - pass the appWidgetId through
                     WidgetHostManager.getInstance(requireContext()).bindWidgetResult(
                         pendingWidgetSlot,
-                        appWidgetId, // This won't work correctly - we need to track the actual ID
+                        pendingWidgetId,
                         result.data
                     )
-                    pendingWidgetSlot = -1
                 } else if (pendingWidgetSlot != -1) {
-                    // User cancelled - clean up the allocated ID
-                    // We'd need to track the ID that was allocated
-                    pendingWidgetSlot = -1
+                    WidgetHostManager.getInstance(requireContext()).cleanupWidgetId(pendingWidgetId)
                 }
+                pendingWidgetSlot = -1
+                pendingWidgetId = -1
             }
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
@@ -137,14 +133,12 @@ class SettingsActivity : AppCompatActivity() {
 
         private fun launchWidgetPicker(slotIndex: Int) {
             val manager = WidgetHostManager.getInstance(requireContext())
-            val appWidgetId = manager.allocateWidgetIdForSlot(slotIndex)
-            if (appWidgetId == -1) return
+            pendingWidgetId = manager.allocateWidgetIdForSlot(slotIndex)
+            if (pendingWidgetId == -1) return
 
             pendingWidgetSlot = slotIndex
-            // Store the appWidgetId so we can use it in the result
-            // We'll need to track this properly
             val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_PICK)
-                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId)
             pickWidgetLauncher.launch(intent)
         }
 
