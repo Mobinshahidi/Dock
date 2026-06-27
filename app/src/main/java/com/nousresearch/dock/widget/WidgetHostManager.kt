@@ -152,23 +152,32 @@ class WidgetHostManager private constructor(
         }
     }
 
-    /** Bind widget result from picker (called from SettingsActivity onActivityResult). */
-    fun bindWidgetResult(slotIndex: Int, appWidgetId: Int, resultData: Intent?) {
-        if (slotIndex !in 0 until slotCount) return
+    /** Try to bind the widget after picker selection. Returns false if bind permission needed. */
+    fun bindAppWidget(slotIndex: Int, appWidgetId: Int, resultData: Intent?): Boolean {
+        if (slotIndex !in 0 until slotCount) return false
 
         val provider = resultData?.getParcelableExtra<ComponentName>(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER)
         if (provider == null) {
-            // User cancelled or error
             appWidgetHost.deleteAppWidgetId(appWidgetId)
-            return
+            return false
         }
 
-        // Bind the widget
+        if (appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, provider)) {
+            return finalizeWidgetBinding(slotIndex, appWidgetId, provider)
+        }
+        return false
+    }
+
+    /** Complete widget binding after user grants permission via ACTION_APPWIDGET_BIND. */
+    fun finalizeWidgetBinding(slotIndex: Int, appWidgetId: Int, provider: ComponentName?): Boolean {
+        if (slotIndex !in 0 until slotCount || provider == null) {
+            appWidgetHost.deleteAppWidgetId(appWidgetId)
+            return false
+        }
         try {
-            appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, provider)
             val info = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: run {
                 appWidgetHost.deleteAppWidgetId(appWidgetId)
-                return
+                return false
             }
             val hostView = appWidgetHost.createView(context, appWidgetId, info)
             hostView.layoutParams = FrameLayout.LayoutParams(
@@ -177,9 +186,11 @@ class WidgetHostManager private constructor(
             )
             setHostView(slotIndex, hostView)
             persistWidget(slotIndex, provider, appWidgetId)
+            return true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to bind widget", e)
             appWidgetHost.deleteAppWidgetId(appWidgetId)
+            return false
         }
     }
 

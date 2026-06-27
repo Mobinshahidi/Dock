@@ -16,7 +16,6 @@ import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import androidx.preference.SwitchPreferenceCompat
 import com.nousresearch.dock.R
-import com.nousresearch.dock.dream.DockDreamService
 import com.nousresearch.dock.slideshow.PhotoSlideshowManager
 import com.nousresearch.dock.widget.WidgetHostManager
 
@@ -52,19 +51,49 @@ class SettingsActivity : AppCompatActivity() {
         // Widget picker launcher
         private var pendingWidgetSlot = -1
         private var pendingWidgetId = -1
+        private var pendingWidgetProvider: ComponentName? = null
+
         private val pickWidgetLauncher =
             registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                 if (result.resultCode == Activity.RESULT_OK && pendingWidgetSlot != -1) {
-                    WidgetHostManager.getInstance(requireContext()).bindWidgetResult(
-                        pendingWidgetSlot,
-                        pendingWidgetId,
-                        result.data
+                    val manager = WidgetHostManager.getInstance(requireContext())
+                    if (manager.bindAppWidget(pendingWidgetSlot, pendingWidgetId, result.data)) {
+                        // Bound directly
+                    } else {
+                        // Need ACTION_REQUEST_BIND_APPWIDGET
+                        pendingWidgetProvider = result.data?.getParcelableExtra(
+                            AppWidgetManager.EXTRA_APPWIDGET_PROVIDER
+                        )
+                        if (pendingWidgetProvider != null) {
+                            val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND)
+                                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId)
+                                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, pendingWidgetProvider)
+                            bindWidgetLauncher.launch(intent)
+                        } else {
+                            manager.cleanupWidgetId(pendingWidgetId)
+                            pendingWidgetSlot = -1
+                            pendingWidgetId = -1
+                        }
+                    }
+                } else if (pendingWidgetSlot != -1) {
+                    WidgetHostManager.getInstance(requireContext()).cleanupWidgetId(pendingWidgetId)
+                    pendingWidgetSlot = -1
+                    pendingWidgetId = -1
+                }
+            }
+
+        private val bindWidgetLauncher =
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                if (result.resultCode == Activity.RESULT_OK && pendingWidgetSlot != -1) {
+                    WidgetHostManager.getInstance(requireContext()).finalizeWidgetBinding(
+                        pendingWidgetSlot, pendingWidgetId, pendingWidgetProvider
                     )
                 } else if (pendingWidgetSlot != -1) {
                     WidgetHostManager.getInstance(requireContext()).cleanupWidgetId(pendingWidgetId)
                 }
                 pendingWidgetSlot = -1
                 pendingWidgetId = -1
+                pendingWidgetProvider = null
             }
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
@@ -184,10 +213,6 @@ class SettingsActivity : AppCompatActivity() {
 
             // Notify slideshow manager
             PhotoSlideshowManager.getInstance(context).setPhotoUris(uris)
-
-            // Also persist in DockDreamService's prefs (same SharedPreferences)
-            val dreamService = DockDreamService()
-            dreamService.persistPhotoUris(uris)
         }
 
         private fun updatePickPhotosSummary(count: Int) {
