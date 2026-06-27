@@ -122,7 +122,7 @@ class SettingsActivity : AppCompatActivity() {
                 updateSlotManageVisibility(count)
                 true
             }
-            val currentSlotCount = prefs.getInt(getString(R.string.pref_key_widget_slot_count), 1)
+            val currentSlotCount = prefs.getString(getString(R.string.pref_key_widget_slot_count), "1")?.toIntOrNull() ?: 1
             updateSlotManageVisibility(currentSlotCount)
 
             // Per-slot widget pickers
