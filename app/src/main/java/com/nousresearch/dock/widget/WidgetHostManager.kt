@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Build
+import android.os.Bundle
 import android.content.res.Configuration
 import android.util.Log
 import android.view.View
@@ -307,6 +308,31 @@ class WidgetHostManager private constructor(
         hostView?.let { container.addView(it) }
         hostViews[slotIndex] = hostView
         Log.d(TAG, "setHostView slot=$slotIndex view=${hostView != null}")
+
+        // Set app widget sizing after layout — providers use OPTION_APPWIDGET_MIN/MAX_WIDTH/HEIGHT
+        // to decide which RemoteViews layout to render. Without real dimensions many render 0x0.
+        if (hostView != null) {
+            container.post {
+                val wPx = container.width
+                val hPx = container.height
+                if (wPx > 0 && hPx > 0) {
+                    val density = container.resources.displayMetrics.density
+                    val wDp = (wPx / density).toInt()
+                    val hDp = (hPx / density).toInt()
+                    val options = Bundle().apply {
+                        putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, wDp)
+                        putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, hDp)
+                        putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, wDp)
+                        putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, hDp)
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        hostView.updateAppWidgetSize(options, wDp, hDp, wDp, hDp)
+                    }
+                    appWidgetManager.updateAppWidgetOptions(hostView.appWidgetId, options)
+                    Log.d(TAG, "setHostView: sized slot=$slotIndex ${wDp}x${hDp}dp")
+                }
+            }
+        }
     }
 
     private fun showRail() {
