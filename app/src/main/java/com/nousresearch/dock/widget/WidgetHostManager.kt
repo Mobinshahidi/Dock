@@ -8,6 +8,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Build
 import android.content.res.Configuration
 import android.util.Log
 import android.view.View
@@ -25,8 +26,7 @@ import com.nousresearch.dock.R
  * - Launch widget picker (ACTION_APPWIDGET_PICK)
  * - Add/remove/reorder slots per user config (1-3 slots)
  * - Style each slot: rounded corners, @color/bg_surface background, no shadows
- * - When widgets_enabled=false: fully remove rail from layout, recenter/scale clock
- *   (uses ConstraintSet to swap between two layout states)
+ * - When widgets_enabled=false: hide rail and slot containers
  * - Release widget host on dream stop to avoid leaks
  */
 class WidgetHostManager private constructor(
@@ -69,9 +69,13 @@ class WidgetHostManager private constructor(
     private var isEnabled = true
     private var isStarted = false
 
+    // Themed context for RemoteViews inflation (set by init)
+    private var viewContext: Context = context
+
     /** Initialize with the widget rail container from the dream layout. */
     fun init(widgetRail: ViewGroup) {
         this.widgetRail = widgetRail
+        this.viewContext = widgetRail.context
         createSlotViews()
         loadPersistedState()
     }
@@ -171,24 +175,27 @@ class WidgetHostManager private constructor(
     /** Complete widget binding after user grants permission via ACTION_APPWIDGET_BIND. */
     fun finalizeWidgetBinding(slotIndex: Int, appWidgetId: Int, provider: ComponentName?): Boolean {
         if (slotIndex !in 0 until slotCount || provider == null) {
+            Log.w(TAG, "finalizeWidgetBinding: invalid slot=$slotIndex or provider=$provider")
             appWidgetHost.deleteAppWidgetId(appWidgetId)
             return false
         }
         try {
-            val info = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: run {
+            val info = getWidgetProviderInfo(appWidgetId) ?: run {
+                Log.w(TAG, "finalizeWidgetBinding: no info for id=$appWidgetId")
                 appWidgetHost.deleteAppWidgetId(appWidgetId)
                 return false
             }
-            val hostView = appWidgetHost.createView(context, appWidgetId, info)
+            val hostView = appWidgetHost.createView(viewContext, appWidgetId, info)
             hostView.layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
             setHostView(slotIndex, hostView)
             persistWidget(slotIndex, provider, appWidgetId)
+            Log.d(TAG, "finalizeWidgetBinding: success slot=$slotIndex id=$appWidgetId provider=$provider")
             return true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to bind widget", e)
+            Log.e(TAG, "finalizeWidgetBinding: exception slot=$slotIndex id=$appWidgetId", e)
             appWidgetHost.deleteAppWidgetId(appWidgetId)
             return false
         }
@@ -256,11 +263,6 @@ class WidgetHostManager private constructor(
 
     private fun unbindAllWidgets() {
         for (i in 0 until slotCount) {
-            val hostView = hostViews[i]
-            val appWidgetId = hostView?.appWidgetId
-            if (appWidgetId != null) {
-                appWidgetHost.deleteAppWidgetId(appWidgetId)
-            }
             setHostView(i, null)
         }
     }
@@ -272,29 +274,35 @@ class WidgetHostManager private constructor(
         if (flattened != null && appWidgetId != -1) {
             val provider = ComponentName.unflattenFromString(flattened)
             if (provider != null) {
-                val info = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: run {
+                Log.d(TAG, "bindPersistedWidget slot=$slotIndex id=$appWidgetId provider=$provider")
+                val info = getWidgetProviderInfo(appWidgetId) ?: run {
+                    Log.w(TAG, "bindPersistedWidget: no info for slot=$slotIndex, clearing")
                     clearPersistedWidget(slotIndex)
                     return
                 }
-                val hostView = appWidgetHost.createView(context, appWidgetId, info)
+                val hostView = appWidgetHost.createView(viewContext, appWidgetId, info)
                 hostView.layoutParams = FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
+                Log.d(TAG, "bindPersistedWidget: success slot=$slotIndex id=$appWidgetId")
                 setHostView(slotIndex, hostView)
             } else {
+                Log.w(TAG, "bindPersistedWidget: null provider for slot=$slotIndex, clearing")
                 clearPersistedWidget(slotIndex)
             }
         }
     }
 
     private fun setHostView(slotIndex: Int, hostView: AppWidgetHostView?) {
-        val container = slotViews[slotIndex] ?: return
-        // Remove old
+        val container = slotViews[slotIndex] ?: run {
+            Log.w(TAG, "setHostView: no container for slot=$slotIndex")
+            return
+        }
         container.removeAllViews()
-        // Add new
         hostView?.let { container.addView(it) }
         hostViews[slotIndex] = hostView
+        Log.d(TAG, "setHostView slot=$slotIndex view=${hostView != null}")
     }
 
     private fun showRail() {
@@ -309,6 +317,24 @@ class WidgetHostManager private constructor(
         for (i in 0 until slotCount) {
             slotViews[i]?.visibility = View.GONE
         }
+    }
+
+    /** Resolve AppWidgetProviderInfo for an appWidgetId, supporting API 26+ (minSdk). */
+    private fun getWidgetProviderInfo(appWidgetId: Int): AppWidgetProviderInfo? {
+        val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            appWidgetManager.getAppWidgetInfo(appWidgetId)
+        } else {
+            @Suppress("DEPRECATION")
+            try {
+                appWidgetManager.getAppWidgetProviderInfo(appWidgetId)
+            } catch (e: IllegalArgumentException) {
+                null
+            }
+        }
+        if (info == null) {
+            Log.w(TAG, "getWidgetProviderInfo: no info for appWidgetId=$appWidgetId")
+        }
+        return info
     }
 
     private fun loadPersistedState() {

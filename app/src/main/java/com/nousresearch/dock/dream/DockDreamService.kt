@@ -1,19 +1,13 @@
 package com.nousresearch.dock.dream
 
-import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.net.Uri
-import android.os.Bundle
 import android.service.dreams.DreamService
-import android.util.Base64
 import android.view.View
-import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.constraintlayout.widget.ConstraintSet
-import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import com.nousresearch.dock.R
 import com.nousresearch.dock.slideshow.PhotoSlideshowManager
@@ -26,7 +20,7 @@ import com.nousresearch.dock.widget.WidgetHostManager
  * Phase 2: Reads slideshow_enabled and widgets_enabled toggles from
  *          SharedPreferences and shows/hides the respective modules.
  * Phase 3: Integrates PhotoSlideshowManager for photo background with crossfade.
- * Phase 4: Integrates WidgetHostManager with ConstraintSet layout swap.
+ * Phase 4: Integrates WidgetHostManager for live widgets.
  *
  * The system handles auto-launch when charging (user selects Dock
  * in Settings → Display → Screen saver → While charging).
@@ -45,10 +39,6 @@ class DockDreamService : DreamService() {
     private lateinit var widgetRail: LinearLayout
     private lateinit var clockDisplay: android.widget.TextClock
     private lateinit var dateDisplay: android.widget.TextClock
-
-    // ConstraintSets for layout swap
-    private val widgetsEnabledConstraintSet = ConstraintSet()
-    private val widgetsDisabledConstraintSet = ConstraintSet()
 
     // Managers (lazy — Service context not valid during construction)
     private lateinit var slideshowManager: PhotoSlideshowManager
@@ -95,9 +85,6 @@ class DockDreamService : DreamService() {
         widgetHostManager = WidgetHostManager.getInstance(this)
         widgetHostManager.init(widgetRail)
 
-        // Build constraint sets for layout swap (widgets enabled/disabled)
-        buildConstraintSets()
-
         applyBackgroundColor()
         applyBrightnessOverride()
         loadModuleStates()
@@ -137,30 +124,12 @@ class DockDreamService : DreamService() {
 
         // Widgets
         widgetHostManager.setEnabled(widgetsEnabled)
-        applyWidgetLayout(widgetsEnabled)
     }
 
     private fun startSlideshowIfEnabled() {
         if (slideshowManager.isEnabled()) {
             slideshowManager.start()
         }
-    }
-
-    private fun applyWidgetLayout(widgetsEnabled: Boolean) {
-        val constraintSet = if (widgetsEnabled) {
-            widgetsEnabledConstraintSet
-        } else {
-            widgetsDisabledConstraintSet
-        }
-        constraintSet.applyTo(rootLayout)
-    }
-
-    private fun buildConstraintSets() {
-        widgetsEnabledConstraintSet.clone(rootLayout)
-        widgetsEnabledConstraintSet.setVisibility(R.id.widget_rail, View.VISIBLE)
-
-        widgetsDisabledConstraintSet.clone(rootLayout)
-        widgetsDisabledConstraintSet.setVisibility(R.id.widget_rail, View.GONE)
     }
 
     // ------------------------------------------------------------------
