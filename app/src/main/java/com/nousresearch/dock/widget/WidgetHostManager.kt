@@ -275,18 +275,22 @@ class WidgetHostManager private constructor(
             val provider = ComponentName.unflattenFromString(flattened)
             if (provider != null) {
                 Log.d(TAG, "bindPersistedWidget slot=$slotIndex id=$appWidgetId provider=$provider")
-                val info = getWidgetProviderInfo(appWidgetId) ?: run {
-                    Log.w(TAG, "bindPersistedWidget: no info for slot=$slotIndex, clearing")
-                    clearPersistedWidget(slotIndex)
-                    return
+                try {
+                    val info = getWidgetProviderInfo(appWidgetId) ?: run {
+                        Log.w(TAG, "bindPersistedWidget: no info for slot=$slotIndex, clearing")
+                        clearPersistedWidget(slotIndex)
+                        return
+                    }
+                    val hostView = appWidgetHost.createView(viewContext, appWidgetId, info)
+                    hostView.layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    Log.d(TAG, "bindPersistedWidget: success slot=$slotIndex id=$appWidgetId")
+                    setHostView(slotIndex, hostView)
+                } catch (e: Exception) {
+                    Log.e(TAG, "bindPersistedWidget: exception slot=$slotIndex id=$appWidgetId", e)
                 }
-                val hostView = appWidgetHost.createView(viewContext, appWidgetId, info)
-                hostView.layoutParams = FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-                Log.d(TAG, "bindPersistedWidget: success slot=$slotIndex id=$appWidgetId")
-                setHostView(slotIndex, hostView)
             } else {
                 Log.w(TAG, "bindPersistedWidget: null provider for slot=$slotIndex, clearing")
                 clearPersistedWidget(slotIndex)
@@ -319,27 +323,25 @@ class WidgetHostManager private constructor(
         }
     }
 
-    /** Resolve AppWidgetProviderInfo for an appWidgetId, supporting API 26+ (minSdk). */
+    /** Resolve AppWidgetProviderInfo for an appWidgetId (supports API 26+).
+     *  Tries the nullable getAppWidgetInfo (API 33+), then falls back to the
+     *  deprecated getAppWidgetProviderInfo via reflection (removed from API 34
+     *  compile stubs but present at runtime on all API levels). */
     private fun getWidgetProviderInfo(appWidgetId: Int): AppWidgetProviderInfo? {
-        val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            appWidgetManager.getAppWidgetInfo(appWidgetId)
-        } else {
-            // getAppWidgetProviderInfo(int) was removed from API 34 SDK stubs
-            // but exists at runtime on API < 33 — use reflection
-            try {
-                val method = AppWidgetManager::class.java.getMethod(
-                    "getAppWidgetProviderInfo", Int::class.java
-                )
-                method.invoke(appWidgetManager, appWidgetId) as? AppWidgetProviderInfo
-            } catch (e: Exception) {
-                Log.w(TAG, "getWidgetProviderInfo: reflection failed", e)
-                null
-            }
+        // Modern nullable API (API 33+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            appWidgetManager.getAppWidgetInfo(appWidgetId)?.let { return it }
         }
-        if (info == null) {
-            Log.w(TAG, "getWidgetProviderInfo: no info for appWidgetId=$appWidgetId")
+        // Fallback via reflection — getAppWidgetProviderInfo works on all API levels
+        return try {
+            val method = AppWidgetManager::class.java.getMethod(
+                "getAppWidgetProviderInfo", Int::class.java
+            )
+            method.invoke(appWidgetManager, appWidgetId) as? AppWidgetProviderInfo
+        } catch (e: Exception) {
+            Log.w(TAG, "getWidgetProviderInfo: fallback failed for id=$appWidgetId", e)
+            null
         }
-        return info
     }
 
     private fun loadPersistedState() {
