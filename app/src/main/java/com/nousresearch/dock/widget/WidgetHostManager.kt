@@ -271,7 +271,7 @@ class WidgetHostManager private constructor(
         val appWidgetId = prefs.getInt("${PREFS_KEY_SLOT_PREFIX}${slotIndex}_id", -1)
         if (flattened != null && appWidgetId != -1) {
             val provider = ComponentName.unflattenFromString(flattened)
-            if (provider != null && appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, provider)) {
+            if (provider != null) {
                 val info = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: run {
                     clearPersistedWidget(slotIndex)
                     return
