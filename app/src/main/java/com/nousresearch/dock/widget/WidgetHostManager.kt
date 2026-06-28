@@ -157,16 +157,19 @@ class WidgetHostManager private constructor(
         }
     }
 
-    /** Try to bind the widget after picker selection. Returns false if bind permission needed. */
     fun bindAppWidget(slotIndex: Int, appWidgetId: Int, resultData: Intent?): Boolean {
         if (slotIndex !in 0 until slotCount) return false
 
+        appWidgetManager.getAppWidgetInfo(appWidgetId)?.let { info ->
+            return finalizeWidgetBinding(slotIndex, appWidgetId, info.provider)
+        }
+
         val provider = resultData?.getParcelableExtra<ComponentName>(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER)
         if (provider == null) {
+            Log.w(TAG, "bindAppWidget: no provider info and no provider extra for id=$appWidgetId")
             appWidgetHost.deleteAppWidgetId(appWidgetId)
             return false
         }
-
         if (appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, provider)) {
             return finalizeWidgetBinding(slotIndex, appWidgetId, provider)
         }
