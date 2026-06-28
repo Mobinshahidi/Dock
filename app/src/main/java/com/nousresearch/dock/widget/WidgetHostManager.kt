@@ -324,10 +324,15 @@ class WidgetHostManager private constructor(
         val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             appWidgetManager.getAppWidgetInfo(appWidgetId)
         } else {
-            @Suppress("DEPRECATION")
+            // getAppWidgetProviderInfo(int) was removed from API 34 SDK stubs
+            // but exists at runtime on API < 33 — use reflection
             try {
-                appWidgetManager.getAppWidgetProviderInfo(appWidgetId)
-            } catch (e: IllegalArgumentException) {
+                val method = AppWidgetManager::class.java.getMethod(
+                    "getAppWidgetProviderInfo", Int::class.java
+                )
+                method.invoke(appWidgetManager, appWidgetId) as? AppWidgetProviderInfo
+            } catch (e: Exception) {
+                Log.w(TAG, "getWidgetProviderInfo: reflection failed", e)
                 null
             }
         }
