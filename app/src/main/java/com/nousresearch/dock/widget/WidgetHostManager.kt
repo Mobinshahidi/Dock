@@ -57,7 +57,7 @@ class WidgetHostManager private constructor(
     }
 
     // AppWidgetHost
-    private val appWidgetHost = AppWidgetHost(context, HOST_ID)
+    private val appWidgetHost = LoggingAppWidgetHost(context, HOST_ID)
     private val appWidgetManager: AppWidgetManager = AppWidgetManager.getInstance(context)
 
     // Views
@@ -349,25 +349,8 @@ class WidgetHostManager private constructor(
         }
     }
 
-    /** Resolve AppWidgetProviderInfo for an appWidgetId (supports API 26+).
-     *  Tries the nullable getAppWidgetInfo (API 33+), then falls back to the
-     *  deprecated getAppWidgetProviderInfo via reflection (removed from API 34
-     *  compile stubs but present at runtime on all API levels). */
     private fun getWidgetProviderInfo(appWidgetId: Int): AppWidgetProviderInfo? {
-        // Modern nullable API (API 33+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            appWidgetManager.getAppWidgetInfo(appWidgetId)?.let { return it }
-        }
-        // Fallback via reflection — getAppWidgetProviderInfo works on all API levels
-        return try {
-            val method = AppWidgetManager::class.java.getMethod(
-                "getAppWidgetProviderInfo", Int::class.java
-            )
-            method.invoke(appWidgetManager, appWidgetId) as? AppWidgetProviderInfo
-        } catch (e: Exception) {
-            Log.w(TAG, "getWidgetProviderInfo: fallback failed for id=$appWidgetId", e)
-            null
-        }
+        return appWidgetManager.getAppWidgetInfo(appWidgetId)
     }
 
     private fun loadPersistedState() {
@@ -400,5 +383,21 @@ class WidgetHostManager private constructor(
             .remove("${PREFS_KEY_SLOT_PREFIX}${slotIndex}_provider")
             .remove("${PREFS_KEY_SLOT_PREFIX}${slotIndex}_id")
             .apply()
+    }
+
+    private class LoggingHostView(context: Context) : AppWidgetHostView(context) {
+        override fun updateAppWidget(remoteViews: android.widget.RemoteViews?) {
+            Log.d(TAG, "updateAppWidget DELIVERED for id=$appWidgetId: $remoteViews")
+            super.updateAppWidget(remoteViews)
+        }
+    }
+
+    private class LoggingAppWidgetHost(context: Context, hostId: Int) : AppWidgetHost(context, hostId) {
+        override fun onCreateView(
+            context: Context, appWidgetId: Int, appWidget: AppWidgetProviderInfo?
+        ): AppWidgetHostView {
+            Log.d(TAG, "onCreateView for id=$appWidgetId provider=${appWidget?.provider}")
+            return LoggingHostView(context)
+        }
     }
 }
