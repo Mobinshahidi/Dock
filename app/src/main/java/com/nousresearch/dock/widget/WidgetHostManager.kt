@@ -77,8 +77,8 @@ class WidgetHostManager private constructor(
     fun init(widgetRail: ViewGroup) {
         this.widgetRail = widgetRail
         this.viewContext = widgetRail.context
-        createSlotViews()
         loadPersistedState()
+        createSlotViews()
     }
 
     /** Start binding all widgets. Must be called after init(). */

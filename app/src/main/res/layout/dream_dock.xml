@@ -78,7 +78,7 @@
     <LinearLayout
         android:id="@+id/widget_rail"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="120dp"
         android:orientation="horizontal"
         android:padding="12dp"
         android:gravity="center"
