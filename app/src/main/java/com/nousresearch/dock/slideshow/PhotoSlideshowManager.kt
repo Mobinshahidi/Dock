@@ -11,7 +11,6 @@ import android.view.View
 import android.widget.ImageView
 import androidx.annotation.VisibleForTesting
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.nousresearch.dock.R
@@ -148,35 +147,33 @@ class PhotoSlideshowManager private constructor(
 
     private fun loadCurrentPhoto() {
         val uri = photoUris[currentIndex]
-        val targetView = if (isFrontShowing) frontImageView else backImageView
-        val otherView = if (isFrontShowing) backImageView else frontImageView
+        val targetView = if (isFrontShowing) backImageView else frontImageView
 
-        // Load new photo into the hidden view
         Glide.with(context)
             .load(uri)
             .centerCrop()
-            .transition(DrawableTransitionOptions.withCrossFade(500))
             .into(object : CustomTarget<Drawable>() {
                 override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-                    targetView?.setImageDrawable(resource)
-                    // Crossfade: show new, hide old
+                    targetView?.apply {
+                        setImageDrawable(resource)
+                        alpha = 0f
+                        visibility = View.VISIBLE
+                    }
                     crossfadeViews()
                 }
 
                 override fun onLoadCleared(placeholder: Drawable?) {}
             })
-
-        // Clear the other view after crossfade completes
-        otherView?.setImageDrawable(null)
     }
 
     private fun crossfadeViews() {
         val fromView = if (isFrontShowing) frontImageView else backImageView
         val toView = if (isFrontShowing) backImageView else frontImageView
 
-        fromView?.animate()?.alpha(0f)?.setDuration(500)?.start()
-        toView?.alpha = 1f
-        toView?.visibility = View.VISIBLE
+        toView?.animate()?.alpha(1f)?.setDuration(500)?.start()
+        fromView?.animate()?.alpha(0f)?.setDuration(500)?.withEndAction {
+            fromView?.setImageDrawable(null)
+        }?.start()
 
         isFrontShowing = !isFrontShowing
     }
