@@ -161,10 +161,10 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
 
         if (animFraction < 1f) {
             // Old text slides up + fades out
-            paint.alpha = (oldAlpha * (1f - animFraction)).coerceIn(0, 255)
+            paint.alpha = (oldAlpha * (1f - animFraction)).coerceIn(0f, 255f).toInt()
             canvas.drawText(prevText, cx, textY - (1f - animFraction) * 40f, paint)
             // New text slides up from below + fades in
-            paint.alpha = (oldAlpha * animFraction).coerceIn(0, 255)
+            paint.alpha = (oldAlpha * animFraction).coerceIn(0f, 255f).toInt()
             canvas.drawText(displayText, cx, textY + (1f - animFraction) * 40f, paint)
             paint.alpha = oldAlpha
         } else {
@@ -209,9 +209,9 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
             if (animFraction < 1f && i < 2 && prevText.length > i) {
                 val prevChar = prevText[i]
                 if (prevChar != chars[i]) {
-                    paint.alpha = (oldAlpha * (1f - animFraction)).coerceIn(0, 255)
+                    paint.alpha = (oldAlpha * (1f - animFraction)).coerceIn(0f, 255f).toInt()
                     canvas.drawText(String(charArrayOf(prevChar)), x + cw / 2f, textY - (1f - animFraction) * 30f, paint)
-                    paint.alpha = (oldAlpha * animFraction).coerceIn(0, 255)
+                    paint.alpha = (oldAlpha * animFraction).coerceIn(0f, 255f).toInt()
                     canvas.drawText(digitText, x + cw / 2f, textY + (1f - animFraction) * 30f, paint)
                     paint.alpha = oldAlpha
                 } else {
@@ -268,9 +268,9 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         val oldStroke = paint.strokeWidth
 
         if (animFraction < 1f) {
-            paint.alpha = (oldAlpha * (1f - animFraction)).coerceIn(0, 255)
+            paint.alpha = (oldAlpha * (1f - animFraction)).coerceIn(0f, 255f).toInt()
             canvas.drawText(prevText, cx, textY - (1f - animFraction) * 40f, paint)
-            paint.alpha = (oldAlpha * animFraction).coerceIn(0, 255)
+            paint.alpha = (oldAlpha * animFraction).coerceIn(0f, 255f).toInt()
             canvas.drawText(displayText, cx, textY + (1f - animFraction) * 40f, paint)
             paint.alpha = oldAlpha
         } else {
