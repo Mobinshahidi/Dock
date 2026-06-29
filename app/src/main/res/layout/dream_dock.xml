@@ -43,36 +43,41 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Clock & Date — centered horizontally, top half -->
-    <TextClock
-        android:id="@+id/clock_display"
+    <LinearLayout
+        android:id="@+id/clock_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontWeight="300"
-        android:textColor="@color/text_primary"
-        android:textSize="@dimen/clock_text_size"
-        android:format12Hour="hh:mm"
-        android:format24Hour="HH:mm"
-        app:layout_constraintBottom_toTopOf="@+id/date_display"
+        android:orientation="vertical"
+        android:gravity="center"
+        app:layout_constraintBottom_toTopOf="@+id/widget_rail"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_chainStyle="packed"
-        app:layout_constraintVertical_bias="0.45" />
+        app:layout_constraintVertical_bias="0.45">
 
-    <TextClock
-        android:id="@+id/date_display"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:fontWeight="300"
-        android:textColor="@color/text_primary"
-        android:textSize="@dimen/date_text_size"
-        android:alpha="0.6"
-        android:format12Hour="EEEE, MMMM d"
-        android:format24Hour="EEEE, MMMM d"
-        app:layout_constraintBottom_toTopOf="@+id/widget_rail"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/clock_display" />
+        <TextClock
+            android:id="@+id/clock_display"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontWeight="300"
+            android:textColor="@color/text_primary"
+            android:textSize="@dimen/clock_text_size"
+            android:format12Hour="hh:mm"
+            android:format24Hour="HH:mm" />
+
+        <TextClock
+            android:id="@+id/date_display"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontWeight="300"
+            android:textColor="@color/text_primary"
+            android:textSize="@dimen/date_text_size"
+            android:alpha="0.6"
+            android:format12Hour="EEEE, MMMM d"
+            android:format24Hour="EEEE, MMMM d" />
+
+    </LinearLayout>
 
     <!-- Widget rail — horizontal, at bottom -->
     <LinearLayout

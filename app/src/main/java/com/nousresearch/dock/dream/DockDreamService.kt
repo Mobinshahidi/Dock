@@ -37,6 +37,7 @@ class DockDreamService : DreamService() {
 
     // Widget views
     private lateinit var widgetRail: LinearLayout
+    private lateinit var clockContainer: LinearLayout
     private lateinit var clockDisplay: android.widget.TextClock
     private lateinit var dateDisplay: android.widget.TextClock
 
@@ -79,6 +80,7 @@ class DockDreamService : DreamService() {
 
         // --- Widget views ---
         widgetRail = findViewById(R.id.widget_rail)
+        clockContainer = findViewById(R.id.clock_container)
         clockDisplay = findViewById(R.id.clock_display)
         dateDisplay = findViewById(R.id.date_display)
 
@@ -94,6 +96,8 @@ class DockDreamService : DreamService() {
         super.onDreamingStarted()
         // Read toggles at launch (settings changes take effect next launch)
         loadModuleStates()
+        applyClockPosition()
+        applyClockCustomization()
         startSlideshowIfEnabled()
         widgetHostManager.start()
     }
@@ -102,6 +106,54 @@ class DockDreamService : DreamService() {
         super.onDreamingStopped()
         slideshowManager.stop()
         widgetHostManager.stop()
+    }
+
+    // ------------------------------------------------------------------
+    // Clock customization
+    // ------------------------------------------------------------------
+
+    private fun applyClockPosition() {
+        val position = prefs.getString(
+            getString(R.string.pref_key_clock_position), "left"
+        ) ?: "left"
+        val params = clockContainer.layoutParams as? ConstraintLayout.LayoutParams
+        when (position) {
+            "left" -> {
+                params?.horizontalBias = 0.15f
+                clockContainer.gravity = android.view.Gravity.START
+            }
+            "center" -> {
+                params?.horizontalBias = 0.5f
+                clockContainer.gravity = android.view.Gravity.CENTER_HORIZONTAL
+            }
+            "right" -> {
+                params?.horizontalBias = 0.85f
+                clockContainer.gravity = android.view.Gravity.END
+            }
+        }
+        if (params != null) clockContainer.layoutParams = params
+    }
+
+    private fun applyClockCustomization() {
+        val sizeRatio = prefs.getString(
+            getString(R.string.pref_key_clock_font_size), "1.0"
+        )?.toFloatOrNull() ?: 1.0f
+        val colorOption = prefs.getString(
+            getString(R.string.pref_key_clock_color), "default"
+        ) ?: "default"
+
+        val baseClockSize = resources.getDimension(R.dimen.clock_text_size)
+        val baseDateSize = resources.getDimension(R.dimen.date_text_size)
+        clockDisplay.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, baseClockSize * sizeRatio)
+        dateDisplay.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, baseDateSize * sizeRatio)
+
+        val textColor = when (colorOption) {
+            "white" -> getColor(R.color.text_primary)
+            "accent" -> getColor(R.color.accent)
+            else -> getColor(R.color.text_primary)
+        }
+        clockDisplay.setTextColor(textColor)
+        dateDisplay.setTextColor(textColor)
     }
 
     // ------------------------------------------------------------------

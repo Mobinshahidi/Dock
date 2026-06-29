@@ -36,6 +36,35 @@
         android:defaultValue="7"
         android:dependency="@string/pref_key_night_dim" />
 
+    <!-- ===== Clock ===== -->
+    <PreferenceCategory
+        android:title="@string/section_clock"
+        android:layout="@layout/preference_category_custom" />
+
+    <ListPreference
+        android:key="@string/pref_key_clock_position"
+        android:title="@string/pref_clock_position_title"
+        android:summary="@string/pref_clock_position_summary"
+        android:entries="@array/clock_position_labels"
+        android:entryValues="@array/clock_position_values"
+        android:defaultValue="left" />
+
+    <ListPreference
+        android:key="@string/pref_key_clock_font_size"
+        android:title="@string/pref_clock_font_size_title"
+        android:summary="@string/pref_clock_font_size_summary"
+        android:entries="@array/clock_font_size_labels"
+        android:entryValues="@array/clock_font_size_values"
+        android:defaultValue="1.0" />
+
+    <ListPreference
+        android:key="@string/pref_key_clock_color"
+        android:title="@string/pref_clock_color_title"
+        android:summary="@string/pref_clock_color_summary"
+        android:entries="@array/clock_color_labels"
+        android:entryValues="@array/clock_color_values"
+        android:defaultValue="default" />
+
     <!-- ===== Slideshow ===== -->
     <PreferenceCategory
         android:title="@string/section_slideshow"
