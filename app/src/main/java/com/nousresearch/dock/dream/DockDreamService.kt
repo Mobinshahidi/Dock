@@ -7,6 +7,7 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.service.dreams.DreamService
 import android.view.LayoutInflater
+import android.view.Surface
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -50,64 +51,35 @@ class DockDreamService : DreamService() {
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        // --- DreamService config ---
-        setInteractive(false)        // touch dismisses
-        setFullscreen(true)          // hide system bars
-        setScreenBright(false)       // respect brightness override
+        setInteractive(false)
+        setFullscreen(true)
+        setScreenBright(false)
+        applySystemUiFlags()
 
-        // Hide decor
-        window?.decorView?.systemUiVisibility = (
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-            )
-
-        // --- Load prefs ---
         prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        setupContentView()
+    }
 
-        // --- Inflate main layout (always landscape) ---
-        // The system DreamActivity may host dreams with a fixed orientation
-        // that doesn't match the physical device.  We force the resource
-        // qualifier via createConfigurationContext so the landscape layout
-        // always loads — desk clocks / photo frames look best in landscape.
-        val config = Configuration(resources.configuration).apply {
-            orientation = Configuration.ORIENTATION_LANDSCAPE
-        }
-        setContentView(
-            LayoutInflater.from(createConfigurationContext(config))
-                .inflate(R.layout.dream_dock, null)
-        )
-        rootLayout = findViewById(R.id.dream_root)
+    /**
+     * Called when the device orientation changes while the dream is
+     * running (e.g. user rotates the phone).  Tears down the view tree
+     * and rebuilds it against the correct layout-land / layout resource.
+     */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (::widgetHostManager.isInitialized) widgetHostManager.stop()
+        if (::slideshowManager.isInitialized) slideshowManager.stop()
 
-        // --- Slideshow views ---
-        slideshowFront = findViewById(R.id.slideshow_front)
-        slideshowBack = findViewById(R.id.slideshow_back)
-        scrimOverlay = findViewById(R.id.scrim_overlay)
-
-        // Initialize managers (context is valid now)
-        slideshowManager = PhotoSlideshowManager.getInstance(this)
-        slideshowManager.init(slideshowFront, slideshowBack, scrimOverlay)
-
-        // --- Widget views ---
-        widgetRail = findViewById(R.id.widget_rail)
-        clockContainer = findViewById(R.id.clock_container)
-        clockDisplay = findViewById(R.id.clock_display)
-        dateDisplay = findViewById(R.id.date_display)
-
-        widgetHostManager = WidgetHostManager.getInstance(this)
-        widgetHostManager.init(widgetRail)
-
-        applyBackgroundColor()
-        applyBrightnessOverride()
+        setupContentView()
         loadModuleStates()
+        applyClockPosition()
+        applyClockCustomization()
+        startSlideshowIfEnabled()
+        widgetHostManager.start()
     }
 
     override fun onDreamingStarted() {
         super.onDreamingStarted()
-        // Read toggles at launch (settings changes take effect next launch)
         loadModuleStates()
         applyClockPosition()
         applyClockCustomization()
@@ -119,6 +91,62 @@ class DockDreamService : DreamService() {
         super.onDreamingStopped()
         slideshowManager.stop()
         widgetHostManager.stop()
+    }
+
+    /** Hide system bars for an immersive dream experience. */
+    private fun applySystemUiFlags() {
+        window?.decorView?.systemUiVisibility = (
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            )
+    }
+
+    /**
+     * Detects the physical display rotation directly.  The system
+     * DreamActivity wrapper can report a stale/fixed orientation
+     * that doesn't match how the device is actually held.
+     */
+    private fun currentPhysicalOrientation(): Int =
+        when (windowManager.defaultDisplay.rotation) {
+            Surface.ROTATION_90, Surface.ROTATION_270 -> Configuration.ORIENTATION_LANDSCAPE
+            else -> Configuration.ORIENTATION_PORTRAIT
+        }
+
+    /** Inflates the correct layout based on physical rotation and sets up all views. */
+    private fun setupContentView() {
+        val actualOrientation = currentPhysicalOrientation()
+        val view = if (resources.configuration.orientation != actualOrientation) {
+            val config = Configuration(resources.configuration).apply {
+                orientation = actualOrientation
+            }
+            LayoutInflater.from(createConfigurationContext(config))
+                .inflate(R.layout.dream_dock, null)
+        } else {
+            LayoutInflater.from(this).inflate(R.layout.dream_dock, null)
+        }
+        setContentView(view)
+
+        rootLayout = findViewById(R.id.dream_root)
+        slideshowFront = findViewById(R.id.slideshow_front)
+        slideshowBack = findViewById(R.id.slideshow_back)
+        scrimOverlay = findViewById(R.id.scrim_overlay)
+        widgetRail = findViewById(R.id.widget_rail)
+        clockContainer = findViewById(R.id.clock_container)
+        clockDisplay = findViewById(R.id.clock_display)
+        dateDisplay = findViewById(R.id.date_display)
+
+        slideshowManager = PhotoSlideshowManager.getInstance(this)
+        slideshowManager.init(slideshowFront, slideshowBack, scrimOverlay)
+
+        widgetHostManager = WidgetHostManager.getInstance(this)
+        widgetHostManager.init(widgetRail)
+
+        applyBackgroundColor()
+        applyBrightnessOverride()
     }
 
     // ------------------------------------------------------------------
