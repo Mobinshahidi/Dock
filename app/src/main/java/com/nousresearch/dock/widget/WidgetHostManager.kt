@@ -224,10 +224,21 @@ class WidgetHostManager private constructor(
     private fun createSlotViews() {
         widgetRail?.removeAllViews()
         val isLandscape = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        val spacingPx = (12 * context.resources.displayMetrics.density).toInt()
+        val density = context.resources.displayMetrics.density
+        val spacingPx = (12 * density).toInt()
 
         (widgetRail as? LinearLayout)?.let {
             it.orientation = if (isLandscape) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
+        }
+
+        // Give the portrait rail more height when more slots are present
+        if (!isLandscape) {
+            val railHeightDp = when (slotCount) {
+                3 -> 200
+                2 -> 150
+                else -> 100
+            }
+            widgetRail?.layoutParams?.height = (railHeightDp * density).toInt()
         }
 
         for (i in 0 until slotCount) {

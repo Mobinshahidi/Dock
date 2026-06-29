@@ -45,7 +45,7 @@
     <!-- Clock & Date — left side, vertically centered -->
     <TextClock
         android:id="@+id/clock_display"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontWeight="300"
         android:textColor="@color/text_primary"
@@ -53,7 +53,7 @@
         android:format12Hour="hh:mm"
         android:format24Hour="HH:mm"
         android:layout_marginStart="48dp"
-        android:layout_marginEnd="12dp"
+        android:paddingEnd="12dp"
         android:autoSizeTextType="uniform"
         android:autoSizeMinTextSize="32sp"
         android:autoSizeMaxTextSize="80sp"
