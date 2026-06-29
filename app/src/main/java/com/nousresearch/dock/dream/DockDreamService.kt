@@ -143,7 +143,7 @@ class DockDreamService : DreamService() {
         slideshowManager.init(slideshowFront, slideshowBack, scrimOverlay)
 
         widgetHostManager = WidgetHostManager.getInstance(this)
-        widgetHostManager.init(widgetRail)
+        widgetHostManager.init(widgetRail, actualOrientation == Configuration.ORIENTATION_LANDSCAPE)
 
         applyBackgroundColor()
         applyBrightnessOverride()

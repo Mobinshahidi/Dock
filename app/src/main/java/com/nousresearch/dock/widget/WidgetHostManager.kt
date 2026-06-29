@@ -10,7 +10,6 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Build
 import android.os.Bundle
-import android.content.res.Configuration
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -70,14 +69,16 @@ class WidgetHostManager private constructor(
     private var slotCount = 1
     private var isEnabled = true
     private var isStarted = false
+    private var currentIsLandscape = false
 
     // Themed context for RemoteViews inflation (set by init)
     private var viewContext: Context = context
 
-    /** Initialize with the widget rail container from the dream layout. */
-    fun init(widgetRail: ViewGroup) {
+    /** Initialize with the widget rail container and the current orientation. */
+    fun init(widgetRail: ViewGroup, isLandscape: Boolean) {
         this.widgetRail = widgetRail
         this.viewContext = widgetRail.context.applicationContext
+        this.currentIsLandscape = isLandscape
         loadPersistedState()
         createSlotViews()
     }
@@ -233,7 +234,7 @@ class WidgetHostManager private constructor(
 
     private fun createSlotViews() {
         widgetRail?.removeAllViews()
-        val isLandscape = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val isLandscape = currentIsLandscape
         val density = context.resources.displayMetrics.density
         val spacingPx = (12 * density).toInt()
 
