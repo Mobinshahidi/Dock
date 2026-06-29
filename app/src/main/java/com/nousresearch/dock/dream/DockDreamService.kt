@@ -2,6 +2,7 @@ package com.nousresearch.dock.dream
 
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.graphics.Typeface
 import android.net.Uri
 import android.service.dreams.DreamService
 import android.view.View
