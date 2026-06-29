@@ -9,6 +9,7 @@ import android.service.dreams.DreamService
 import android.view.LayoutInflater
 import android.view.Surface
 import android.view.View
+import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -67,10 +68,18 @@ class DockDreamService : DreamService() {
      */
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        if (::widgetHostManager.isInitialized) widgetHostManager.stop()
-        if (::slideshowManager.isInitialized) slideshowManager.stop()
 
-        setupContentView()
+        // The system can deliver this before onAttachedToWindow() has ever
+        // run (initial dream-window launch).  At that point there is no view
+        // tree or managers to rebuild, and windowManager may still be null.
+        if (!::widgetHostManager.isInitialized) return
+
+        widgetHostManager.stop()
+        slideshowManager.stop()
+
+        // newConfig is the system's authoritative orientation for this
+        // genuine rotation event — no need to re-derive via windowManager.
+        setupContentView(newConfig.orientation)
         loadModuleStates()
         applyClockPosition()
         applyClockCustomization()
@@ -110,15 +119,18 @@ class DockDreamService : DreamService() {
      * DreamActivity wrapper can report a stale/fixed orientation
      * that doesn't match how the device is actually held.
      */
-    private fun currentPhysicalOrientation(): Int =
-        when (windowManager.defaultDisplay.rotation) {
+    private fun currentPhysicalOrientation(): Int {
+        val display = (getSystemService(WINDOW_SERVICE) as? WindowManager)?.defaultDisplay
+            ?: return resources.configuration.orientation
+        return when (display.rotation) {
             Surface.ROTATION_90, Surface.ROTATION_270 -> Configuration.ORIENTATION_LANDSCAPE
             else -> Configuration.ORIENTATION_PORTRAIT
         }
+    }
 
     /** Inflates the correct layout based on physical rotation and sets up all views. */
-    private fun setupContentView() {
-        val actualOrientation = currentPhysicalOrientation()
+    private fun setupContentView(forceOrientation: Int? = null) {
+        val actualOrientation = forceOrientation ?: currentPhysicalOrientation()
         val view = if (resources.configuration.orientation != actualOrientation) {
             val config = Configuration(resources.configuration).apply {
                 orientation = actualOrientation
