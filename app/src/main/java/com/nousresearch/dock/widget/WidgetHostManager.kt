@@ -76,7 +76,7 @@ class WidgetHostManager private constructor(
     /** Initialize with the widget rail container from the dream layout. */
     fun init(widgetRail: ViewGroup) {
         this.widgetRail = widgetRail
-        this.viewContext = widgetRail.context
+        this.viewContext = widgetRail.context.applicationContext
         loadPersistedState()
         createSlotViews()
     }
