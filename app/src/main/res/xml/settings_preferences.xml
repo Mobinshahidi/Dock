@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <!-- ===== Display ===== -->
     <PreferenceCategory
@@ -49,21 +50,32 @@
         android:entryValues="@array/clock_position_values"
         android:defaultValue="left" />
 
-    <ListPreference
+    <SeekBarPreference
         android:key="@string/pref_key_clock_font_size"
         android:title="@string/pref_clock_font_size_title"
         android:summary="@string/pref_clock_font_size_summary"
-        android:entries="@array/clock_font_size_labels"
-        android:entryValues="@array/clock_font_size_values"
-        android:defaultValue="1.0" />
+        app:min="60"
+        app:max="140"
+        android:defaultValue="100"
+        app:showSeekBarValue="true" />
 
     <ListPreference
+        android:key="@string/pref_key_clock_font"
+        android:title="@string/pref_clock_font_title"
+        android:summary="@string/pref_clock_font_summary"
+        android:entries="@array/clock_font_labels"
+        android:entryValues="@array/clock_font_values"
+        android:defaultValue="default" />
+
+    <Preference
+        android:key="clock_font_upload"
+        android:title="@string/clock_font_upload"
+        android:summary="@string/pref_clock_font_summary" />
+
+    <Preference
         android:key="@string/pref_key_clock_color"
         android:title="@string/pref_clock_color_title"
-        android:summary="@string/pref_clock_color_summary"
-        android:entries="@array/clock_color_labels"
-        android:entryValues="@array/clock_color_values"
-        android:defaultValue="default" />
+        android:summary="@string/pref_clock_color_summary" />
 
     <!-- ===== Slideshow ===== -->
     <PreferenceCategory

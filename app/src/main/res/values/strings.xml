@@ -48,6 +48,8 @@
     <string name="pref_key_clock_position">clock_position</string>
     <string name="pref_key_clock_font_size">clock_font_size</string>
     <string name="pref_key_clock_color">clock_color</string>
+    <string name="pref_key_clock_font">clock_font</string>
+    <string name="pref_key_clock_font_file">clock_font_file</string>
     <string name="section_clock">Clock</string>
     <string name="pref_clock_position_title">Clock position</string>
     <string name="pref_clock_position_summary">Horizontal position of the clock in landscape</string>
@@ -55,9 +57,14 @@
     <string name="pref_clock_font_size_summary">Adjust the clock text size</string>
     <string name="pref_clock_color_title">Clock color</string>
     <string name="pref_clock_color_summary">Change the clock and date text color</string>
-    <string name="pref_clock_color_default">Default warm</string>
-    <string name="pref_clock_color_white">White</string>
-    <string name="pref_clock_color_accent">Accent</string>
+    <string name="pref_clock_font_title">Clock font</string>
+    <string name="pref_clock_font_summary">Select or upload a custom font</string>
+    <string name="clock_font_upload">Upload custom font</string>
+    <string name="clock_font_default">Default</string>
+    <string name="clock_font_serif">Serif</string>
+    <string name="clock_font_monospace">Monospace</string>
+    <string name="clock_font_light">Sans-serif Light</string>
+    <string name="clock_font_thin">Sans-serif Thin</string>
 
     <!-- Slot sizes -->
     <string name="pref_slot_size_title">Slot size</string>

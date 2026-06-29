@@ -10,8 +10,11 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.graphics.Color
+import android.graphics.Typeface
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.ListPreference
 import androidx.preference.Preference
@@ -82,6 +85,31 @@ class SettingsActivity : AppCompatActivity() {
                     WidgetHostManager.getInstance(requireContext()).cleanupWidgetId(pendingWidgetId)
                     pendingWidgetSlot = -1
                     pendingWidgetId = -1
+                }
+            }
+
+        private val pickFontLauncher =
+            registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                if (uri != null) {
+                    try {
+                        val context = requireContext()
+                        val inputStream = context.contentResolver.openInputStream(uri)
+                        val fontFile = java.io.File(context.filesDir, "custom_font.ttf")
+                        inputStream?.use { input ->
+                            fontFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        PreferenceManager.getDefaultSharedPreferences(context)
+                            .edit()
+                            .putString(getString(R.string.pref_key_clock_font), "custom")
+                            .putString(getString(R.string.pref_key_clock_font_file), fontFile.absolutePath)
+                            .apply()
+                        val fontPref = findPreference<Preference>("clock_font_upload")
+                        fontPref?.summary = "Custom font loaded"
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             }
 
@@ -180,6 +208,37 @@ class SettingsActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     // Settings may not be reachable
                 }
+                true
+            }
+
+            // Clock color picker — show dialog with preset colors
+            findPreference<Preference>(getString(R.string.pref_key_clock_color))?.setOnPreferenceClickListener {
+                val colors = arrayOf(
+                    "#c3c2b7", "#ffffff", "#d57455", "#ff6b6b",
+                    "#51cf66", "#339af0", "#cc5de8", "#f59f00",
+                    "#e9ecef", "#adb5bd"
+                )
+                val colorNames = arrayOf(
+                    "Warm", "White", "Accent", "Red",
+                    "Green", "Blue", "Purple", "Yellow",
+                    "Light Gray", "Gray"
+                )
+                val builder = AlertDialog.Builder(requireContext())
+                builder.setTitle("Choose clock color")
+                builder.setItems(colorNames) { _, which ->
+                    PreferenceManager.getDefaultSharedPreferences(requireContext())
+                        .edit()
+                        .putString(getString(R.string.pref_key_clock_color), colors[which])
+                        .apply()
+                }
+                builder.setNegativeButton("Cancel", null)
+                builder.show()
+                true
+            }
+
+            // Font upload picker
+            findPreference<Preference>("clock_font_upload")?.setOnPreferenceClickListener {
+                pickFontLauncher.launch(arrayOf("font/ttf", "font/otf", "application/x-font-ttf", "application/x-font-opentype"))
                 true
             }
         }

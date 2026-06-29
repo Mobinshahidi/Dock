@@ -17,6 +17,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.annotation.VisibleForTesting
+import androidx.preference.PreferenceManager
 import com.nousresearch.dock.R
 
 /**
@@ -250,9 +251,9 @@ class WidgetHostManager private constructor(
             widgetRail?.layoutParams?.height = (railHeightDp * density).toInt()
         }
 
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val rawWeights = FloatArray(slotCount) { i ->
-            when (prefs.getString("${PREFS_KEY_SLOT_PREFIX}${i}_size", null)) {
+            when (prefs.getString("slot_size_${i + 1}", null)) {
                 "small" -> 0.7f
                 "large" -> 1.3f
                 else -> 1.0f

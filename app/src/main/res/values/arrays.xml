@@ -95,6 +95,22 @@
         <item>accent</item>
     </string-array>
 
+    <!-- Clock font families -->
+    <string-array name="clock_font_labels">
+        <item>Default</item>
+        <item>Serif</item>
+        <item>Monospace</item>
+        <item>Sans-serif Light</item>
+        <item>Sans-serif Thin</item>
+    </string-array>
+    <string-array name="clock_font_values">
+        <item>default</item>
+        <item>serif</item>
+        <item>monospace</item>
+        <item>sans-serif-light</item>
+        <item>sans-serif-thin</item>
+    </string-array>
+
     <!-- Slot size presets -->
     <string-array name="slot_size_labels">
         <item>Small</item>

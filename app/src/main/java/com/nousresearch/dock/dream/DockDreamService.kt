@@ -135,11 +135,15 @@ class DockDreamService : DreamService() {
     }
 
     private fun applyClockCustomization() {
-        val sizeRatio = prefs.getString(
-            getString(R.string.pref_key_clock_font_size), "1.0"
-        )?.toFloatOrNull() ?: 1.0f
-        val colorOption = prefs.getString(
-            getString(R.string.pref_key_clock_color), "default"
+        val sizePercent = prefs.getInt(
+            getString(R.string.pref_key_clock_font_size), 100
+        )
+        val sizeRatio = sizePercent / 100f
+        val colorHex = prefs.getString(
+            getString(R.string.pref_key_clock_color), "#c3c2b7"
+        ) ?: "#c3c2b7"
+        val fontOption = prefs.getString(
+            getString(R.string.pref_key_clock_font), "default"
         ) ?: "default"
 
         val baseClockSize = resources.getDimension(R.dimen.clock_text_size)
@@ -147,13 +151,37 @@ class DockDreamService : DreamService() {
         clockDisplay.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, baseClockSize * sizeRatio)
         dateDisplay.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, baseDateSize * sizeRatio)
 
-        val textColor = when (colorOption) {
-            "white" -> getColor(R.color.text_primary)
-            "accent" -> getColor(R.color.accent)
-            else -> getColor(R.color.text_primary)
+        try {
+            val textColor = Color.parseColor(colorHex)
+            clockDisplay.setTextColor(textColor)
+            dateDisplay.setTextColor(textColor)
+        } catch (e: Exception) {
+            // fall back to theme default
         }
-        clockDisplay.setTextColor(textColor)
-        dateDisplay.setTextColor(textColor)
+
+        val typeface = when (fontOption) {
+            "serif" -> Typeface.SERIF
+            "monospace" -> Typeface.MONOSPACE
+            "sans-serif-light" -> Typeface.create("sans-serif-light", Typeface.NORMAL)
+            "sans-serif-thin" -> Typeface.create("sans-serif-thin", Typeface.NORMAL)
+            "custom" -> {
+                val fontFile = prefs.getString(
+                    getString(R.string.pref_key_clock_font_file), null
+                )
+                if (fontFile != null) {
+                    try {
+                        Typeface.createFromFile(fontFile)
+                    } catch (e: Exception) {
+                        Typeface.DEFAULT
+                    }
+                } else {
+                    Typeface.DEFAULT
+                }
+            }
+            else -> Typeface.DEFAULT
+        }
+        clockDisplay.typeface = typeface
+        dateDisplay.typeface = typeface
     }
 
     // ------------------------------------------------------------------
