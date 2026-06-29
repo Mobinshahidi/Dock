@@ -77,6 +77,14 @@
             android:format12Hour="EEEE, MMMM d"
             android:format24Hour="EEEE, MMMM d" />
 
+        <TextView
+            android:id="@+id/battery_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:alpha="0.5"
+            android:visibility="gone" />
+
     </LinearLayout>
 
     <!-- Widget rail — horizontal, at bottom -->

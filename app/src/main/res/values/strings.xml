@@ -68,6 +68,25 @@
     <string name="clock_font_monospace">Monospace</string>
     <string name="clock_font_light">Sans-serif Light</string>
     <string name="clock_font_thin">Sans-serif Thin</string>
+    <string name="pref_key_show_date">show_date</string>
+    <string name="pref_show_date_title">Show date</string>
+    <string name="pref_show_date_summary">Display the date below the clock</string>
+    <string name="pref_key_clock_theme">clock_theme</string>
+    <string name="pref_clock_theme_title">Clock theme</string>
+    <string name="pref_clock_theme_summary">Apply a preset color, font, and style combination</string>
+    <string name="pref_key_battery_enabled">battery_enabled</string>
+    <string name="pref_battery_title">Show battery status</string>
+    <string name="pref_battery_summary">Display battery level and charging status</string>
+    <string name="pref_key_clock_animation">clock_animation</string>
+    <string name="pref_clock_animation_title">Clock animation</string>
+    <string name="pref_clock_animation_summary">Subtle motion effects on the clock</string>
+    <string name="theme_default">Default warm</string>
+    <string name="theme_white">White minimal</string>
+    <string name="theme_amber">Warm amber</string>
+    <string name="theme_green">Soft green</string>
+    <string name="theme_blue">Cool blue</string>
+    <string name="theme_red">Sunset red</string>
+    <string name="theme_purple">Muted purple</string>
 
     <!-- Slot sizes -->
     <string name="pref_slot_size_title">Slot size</string>

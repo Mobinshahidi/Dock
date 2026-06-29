@@ -32,12 +32,17 @@
                 android:resource="@xml/dream_config" />
         </service>
 
-        <!-- Settings Activity -->
+        <!-- Settings Activity (visible in launcher) -->
         <activity
             android:name=".settings.SettingsActivity"
             android:exported="true"
             android:label="@string/settings_title"
-            android:theme="@style/Theme.Dock.Settings" />
+            android:theme="@style/Theme.Dock.Settings">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
     </application>
 

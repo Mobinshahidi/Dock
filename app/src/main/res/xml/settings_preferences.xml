@@ -82,6 +82,34 @@
         android:title="@string/pref_clock_color_title"
         android:summary="@string/pref_clock_color_summary" />
 
+    <ListPreference
+        android:key="@string/pref_key_clock_theme"
+        android:title="@string/pref_clock_theme_title"
+        android:summary="@string/pref_clock_theme_summary"
+        android:entries="@array/clock_theme_labels"
+        android:entryValues="@array/clock_theme_values"
+        android:defaultValue="default" />
+
+    <SwitchPreferenceCompat
+        android:key="@string/pref_key_show_date"
+        android:title="@string/pref_show_date_title"
+        android:summary="@string/pref_show_date_summary"
+        android:defaultValue="true" />
+
+    <ListPreference
+        android:key="@string/pref_key_clock_animation"
+        android:title="@string/pref_clock_animation_title"
+        android:summary="@string/pref_clock_animation_summary"
+        android:entries="@array/clock_animation_labels"
+        android:entryValues="@array/clock_animation_values"
+        android:defaultValue="none" />
+
+    <SwitchPreferenceCompat
+        android:key="@string/pref_key_battery_enabled"
+        android:title="@string/pref_battery_title"
+        android:summary="@string/pref_battery_summary"
+        android:defaultValue="true" />
+
     <!-- ===== Slideshow ===== -->
     <PreferenceCategory
         android:title="@string/section_slideshow"

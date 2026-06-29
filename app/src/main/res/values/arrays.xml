@@ -122,4 +122,36 @@
         <item>medium</item>
         <item>large</item>
     </string-array>
+
+    <!-- Clock theme presets -->
+    <string-array name="clock_theme_labels">
+        <item>Default warm</item>
+        <item>White minimal</item>
+        <item>Warm amber</item>
+        <item>Soft green</item>
+        <item>Cool blue</item>
+        <item>Sunset red</item>
+        <item>Muted purple</item>
+    </string-array>
+    <string-array name="clock_theme_values">
+        <item>default</item>
+        <item>white</item>
+        <item>amber</item>
+        <item>green</item>
+        <item>blue</item>
+        <item>red</item>
+        <item>purple</item>
+    </string-array>
+
+    <!-- Clock animation styles -->
+    <string-array name="clock_animation_labels">
+        <item>None</item>
+        <item>Gentle drift</item>
+        <item>Soft pulse</item>
+    </string-array>
+    <string-array name="clock_animation_values">
+        <item>none</item>
+        <item>drift</item>
+        <item>pulse</item>
+    </string-array>
 </resources>
