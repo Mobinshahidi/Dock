@@ -66,8 +66,7 @@
             android:textColor="@color/text_primary"
             android:textSize="@dimen/clock_text_size"
             android:format12Hour="hh:mm"
-            android:format24Hour="HH:mm"
-
+            android:format24Hour="HH:mm" />
 
         <TextClock
             android:id="@+id/date_display"
