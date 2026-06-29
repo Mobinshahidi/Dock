@@ -60,13 +60,16 @@
     <string name="pref_clock_color_accent">Accent</string>
 
     <!-- Slot sizes -->
-    <string name="pref_key_slot_width">slot_width</string>
-    <string name="pref_key_slot_height">slot_height</string>
     <string name="pref_slot_size_title">Slot size</string>
     <string name="pref_slot_size_summary">Widget slot width and height</string>
     <string name="pref_slot_size_small">Small</string>
-    <string name="pref_slot_size_medium">Medium</string>
+    <string name="pref_slot_size_medium">Medium (default)</string>
     <string name="pref_slot_size_large">Large</string>
+
+    <!-- Auto-start -->
+    <string name="section_autostart">Auto-start</string>
+    <string name="pref_autostart_title">Enable auto-start on charge</string>
+    <string name="pref_autostart_summary">Open Settings → Display → Screen saver → select Dock → set to \"While charging\". Also ensure Dock has Unrestricted battery access in Settings → Apps → Dock → Battery.</string>
 
     <!-- About -->
     <string name="section_about">About</string>

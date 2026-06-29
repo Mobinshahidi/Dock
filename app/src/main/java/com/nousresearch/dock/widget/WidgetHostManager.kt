@@ -134,6 +134,15 @@ class WidgetHostManager private constructor(
         }
     }
 
+    /** Call after per-slot size preferences change to rebuild views. */
+    fun notifySlotSizeChanged() {
+        createSlotViews()
+        if (isStarted) {
+            unbindAllWidgets()
+            bindAllWidgets()
+        }
+    }
+
     /** Launch widget picker for a specific slot. */
     fun pickWidgetForSlot(slotIndex: Int, onPicked: (Boolean) -> Unit) {
         if (slotIndex !in 0 until slotCount) {
@@ -241,18 +250,29 @@ class WidgetHostManager private constructor(
             widgetRail?.layoutParams?.height = (railHeightDp * density).toInt()
         }
 
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val rawWeights = FloatArray(slotCount) { i ->
+            when (prefs.getString("${PREFS_KEY_SLOT_PREFIX}${i}_size", null)) {
+                "small" -> 0.7f
+                "large" -> 1.3f
+                else -> 1.0f
+            }
+        }
+        val weightSum = rawWeights.sum()
+        val normWeights = rawWeights.map { it * slotCount / weightSum }
+
         for (i in 0 until slotCount) {
             val lp = if (isLandscape) {
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     0,
-                    1f
+                    normWeights[i]
                 )
             } else {
                 LinearLayout.LayoutParams(
                     0,
                     ViewGroup.LayoutParams.MATCH_PARENT,
-                    1f
+                    normWeights[i]
                 )
             }
             if (i < slotCount - 1) {

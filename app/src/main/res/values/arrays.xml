@@ -98,12 +98,12 @@
     <!-- Slot size presets -->
     <string-array name="slot_size_labels">
         <item>Small</item>
-        <item>Medium</item>
+        <item>Medium (default)</item>
         <item>Large</item>
     </string-array>
     <string-array name="slot_size_values">
-        <item>80</item>
-        <item>120</item>
-        <item>180</item>
+        <item>small</item>
+        <item>medium</item>
+        <item>large</item>
     </string-array>
 </resources>

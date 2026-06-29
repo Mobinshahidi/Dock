@@ -8,7 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.ListPreference
@@ -159,6 +161,27 @@ class SettingsActivity : AppCompatActivity() {
                     true
                 }
             }
+
+            // Per-slot size
+            for (i in 1..3) {
+                val key = "slot_size_$i"
+                findPreference<ListPreference>(key)?.setOnPreferenceChangeListener { _, _ ->
+                    WidgetHostManager.getInstance(context).notifySlotSizeChanged()
+                    true
+                }
+            }
+
+            // Auto-start guide — open system dream settings
+            findPreference<Preference>("auto_start_guide")?.setOnPreferenceClickListener {
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                        startActivity(Intent(Settings.ACTION_DREAM_SETTINGS))
+                    }
+                } catch (e: Exception) {
+                    // Settings may not be reachable
+                }
+                true
+            }
         }
 
         private fun launchWidgetPicker(slotIndex: Int) {
@@ -175,7 +198,9 @@ class SettingsActivity : AppCompatActivity() {
         private fun updateWidgetPrefsVisibility(enabled: Boolean) {
             val keys = listOf(
                 getString(R.string.pref_key_widget_slot_count),
-                "manage_slot_1", "manage_slot_2", "manage_slot_3"
+                "manage_slot_1", "slot_size_1",
+                "manage_slot_2", "slot_size_2",
+                "manage_slot_3", "slot_size_3"
             )
             for (key in keys) {
                 findPreference<Preference>(key)?.isEnabled = enabled
@@ -186,6 +211,8 @@ class SettingsActivity : AppCompatActivity() {
             for (i in 1..3) {
                 val pref = findPreference<Preference>("manage_slot_$i")
                 pref?.isVisible = (i <= count)
+                val sizePref = findPreference<Preference>("slot_size_$i")
+                sizePref?.isVisible = (i <= count)
             }
         }
 

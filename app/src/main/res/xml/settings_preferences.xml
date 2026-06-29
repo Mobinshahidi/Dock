@@ -114,10 +114,29 @@
         android:summary="@string/widget_pick_for_slot"
         android:dependency="@string/pref_key_widgets_enabled" />
 
+    <ListPreference
+        android:key="slot_size_1"
+        android:title="@string/pref_slot_size_title"
+        android:summary="@string/pref_slot_size_summary"
+        android:entries="@array/slot_size_labels"
+        android:entryValues="@array/slot_size_values"
+        android:defaultValue=""
+        android:dependency="@string/pref_key_widgets_enabled" />
+
     <Preference
         android:key="manage_slot_2"
         android:title="@string/widget_manage_slot"
         android:summary="@string/widget_pick_for_slot"
+        android:dependency="@string/pref_key_widgets_enabled"
+        android:visible="false" />
+
+    <ListPreference
+        android:key="slot_size_2"
+        android:title="@string/pref_slot_size_title"
+        android:summary="@string/pref_slot_size_summary"
+        android:entries="@array/slot_size_labels"
+        android:entryValues="@array/slot_size_values"
+        android:defaultValue=""
         android:dependency="@string/pref_key_widgets_enabled"
         android:visible="false" />
 
@@ -127,6 +146,27 @@
         android:summary="@string/widget_pick_for_slot"
         android:dependency="@string/pref_key_widgets_enabled"
         android:visible="false" />
+
+    <ListPreference
+        android:key="slot_size_3"
+        android:title="@string/pref_slot_size_title"
+        android:summary="@string/pref_slot_size_summary"
+        android:entries="@array/slot_size_labels"
+        android:entryValues="@array/slot_size_values"
+        android:defaultValue=""
+        android:dependency="@string/pref_key_widgets_enabled"
+        android:visible="false" />
+
+    <!-- ===== Auto-start ===== -->
+    <PreferenceCategory
+        android:title="@string/section_autostart"
+        android:layout="@layout/preference_category_custom" />
+
+    <Preference
+        android:key="auto_start_guide"
+        android:title="@string/pref_autostart_title"
+        android:summary="@string/pref_autostart_summary"
+        android:selectable="false" />
 
     <!-- ===== About ===== -->
     <PreferenceCategory
