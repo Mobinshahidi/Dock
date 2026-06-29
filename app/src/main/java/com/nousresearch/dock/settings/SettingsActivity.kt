@@ -206,7 +206,7 @@ class SettingsActivity : AppCompatActivity() {
                 val ctx = requireContext()
                 val commands = """
                     |adb shell settings put secure screensaver_enabled 1
-                    |adb shell settings put secure screensaver_components com.nousresearch.dock/.dream.DockDreamService
+                    |adb shell settings put secure screensaver_components com.dock.app/.dream.DockDreamService
                     |adb shell settings put secure screensaver_activate_on_dock 1
                 """.trimMargin()
                 val message = buildString {

@@ -58,15 +58,10 @@
         app:layout_constraintHorizontal_bias="0.15"
         app:layout_constraintVertical_bias="0.5">
 
-        <TextClock
+        <com.nousresearch.dock.dream.AnimatedClockView
             android:id="@+id/clock_display"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontWeight="300"
-            android:textColor="@color/text_primary"
-            android:textSize="@dimen/clock_text_size"
-            android:format12Hour="hh:mm"
-            android:format24Hour="HH:mm" />
+            android:layout_height="wrap_content" />
 
         <TextClock
             android:id="@+id/date_display"

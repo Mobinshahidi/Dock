@@ -123,35 +123,19 @@
         <item>large</item>
     </string-array>
 
-    <!-- Clock theme presets -->
-    <string-array name="clock_theme_labels">
-        <item>Default warm</item>
-        <item>White minimal</item>
-        <item>Warm amber</item>
-        <item>Soft green</item>
-        <item>Cool blue</item>
-        <item>Sunset red</item>
-        <item>Muted purple</item>
+    <!-- Clock visual styles -->
+    <string-array name="clock_style_labels">
+        <item>Normal</item>
+        <item>Bubbly</item>
+        <item>Neon</item>
+        <item>Gradient</item>
+        <item>Outline</item>
     </string-array>
-    <string-array name="clock_theme_values">
+    <string-array name="clock_style_values">
         <item>default</item>
-        <item>white</item>
-        <item>amber</item>
-        <item>green</item>
-        <item>blue</item>
-        <item>red</item>
-        <item>purple</item>
-    </string-array>
-
-    <!-- Clock animation styles -->
-    <string-array name="clock_animation_labels">
-        <item>None</item>
-        <item>Gentle drift</item>
-        <item>Soft pulse</item>
-    </string-array>
-    <string-array name="clock_animation_values">
-        <item>none</item>
-        <item>drift</item>
-        <item>pulse</item>
+        <item>bubbly</item>
+        <item>neon</item>
+        <item>gradient</item>
+        <item>outline</item>
     </string-array>
 </resources>

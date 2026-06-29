@@ -48,16 +48,15 @@ class DockDreamService : DreamService() {
 
     // Widget views
     private lateinit var widgetRail: LinearLayout
+
+    // Clock views
     private lateinit var clockContainer: LinearLayout
-    private lateinit var clockDisplay: android.widget.TextClock
+    private lateinit var clockDisplay: AnimatedClockView
     private lateinit var dateDisplay: android.widget.TextClock
     private lateinit var batteryStatus: TextView
 
     // Battery receiver
     private var batteryReceiver: BroadcastReceiver? = null
-
-    // Clock animation
-    private var clockAnimator: android.animation.ObjectAnimator? = null
 
     // Managers (lazy — Service context not valid during construction)
     private lateinit var slideshowManager: PhotoSlideshowManager
@@ -89,6 +88,7 @@ class DockDreamService : DreamService() {
 
         widgetHostManager.stop()
         slideshowManager.stop()
+        clockDisplay.stop()
 
         // newConfig is the system's authoritative orientation for this
         // genuine rotation event — no need to re-derive via windowManager.
@@ -96,8 +96,8 @@ class DockDreamService : DreamService() {
         loadModuleStates()
         applyClockPosition()
         applyClockCustomization()
-        applyClockTheme()
-        applyClockAnimation()
+        applyClockStyle()
+        clockDisplay.start()
         registerBatteryReceiver()
         startSlideshowIfEnabled()
         widgetHostManager.start()
@@ -108,8 +108,8 @@ class DockDreamService : DreamService() {
         loadModuleStates()
         applyClockPosition()
         applyClockCustomization()
-        applyClockTheme()
-        applyClockAnimation()
+        applyClockStyle()
+        clockDisplay.start()
         registerBatteryReceiver()
         startSlideshowIfEnabled()
         widgetHostManager.start()
@@ -117,8 +117,8 @@ class DockDreamService : DreamService() {
 
     override fun onDreamingStopped() {
         super.onDreamingStopped()
+        clockDisplay.stop()
         unregisterBatteryReceiver()
-        cancelClockAnimation()
         slideshowManager.stop()
         widgetHostManager.stop()
     }
@@ -211,22 +211,19 @@ class DockDreamService : DreamService() {
 
     private fun applyClockCustomization() {
         val clockPercent = prefs.getInt(getString(R.string.pref_key_clock_font_size), 100)
-        val datePercent = prefs.getInt(getString(R.string.pref_key_date_font_size), 100)
         val colorHex = prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
         val fontOption = prefs.getString(getString(R.string.pref_key_clock_font), "default") ?: "default"
+        val animEnabled = prefs.getBoolean(getString(R.string.pref_key_transition_animation), true)
 
         val baseClockSize = resources.getDimension(R.dimen.clock_text_size)
-        val baseDateSize = resources.getDimension(R.dimen.date_text_size)
-        clockDisplay.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, baseClockSize * clockPercent / 100f)
-        dateDisplay.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, baseDateSize * datePercent / 100f)
+        clockDisplay.clockSize = baseClockSize * clockPercent / 100f
 
         try {
             val textColor = Color.parseColor(colorHex)
-            clockDisplay.setTextColor(textColor)
-            dateDisplay.setTextColor(textColor)
+            clockDisplay.clockColor = textColor
         } catch (e: Exception) {}
 
-        val typeface = when (fontOption) {
+        clockDisplay.clockTypeface = when (fontOption) {
             "serif" -> Typeface.SERIF
             "monospace" -> Typeface.MONOSPACE
             "sans-serif-light" -> Typeface.create("sans-serif-light", Typeface.NORMAL)
@@ -238,8 +235,20 @@ class DockDreamService : DreamService() {
             }
             else -> Typeface.DEFAULT
         }
-        clockDisplay.typeface = typeface
-        dateDisplay.typeface = typeface
+        clockDisplay.animEnabled = animEnabled
+        clockDisplay.clockStyle = AnimatedClockView.ClockStyle.DEFAULT
+    }
+
+    /** Apply the selected clock visual style (bubbly, neon, etc.) */
+    private fun applyClockStyle() {
+        val style = prefs.getString(getString(R.string.pref_key_clock_style), "default") ?: "default"
+        clockDisplay.clockStyle = when (style) {
+            "bubbly" -> AnimatedClockView.ClockStyle.BUBBLY
+            "neon" -> AnimatedClockView.ClockStyle.NEON
+            "gradient" -> AnimatedClockView.ClockStyle.GRADIENT
+            "outline" -> AnimatedClockView.ClockStyle.OUTLINE
+            else -> AnimatedClockView.ClockStyle.DEFAULT
+        }
     }
 
     // ------------------------------------------------------------------
@@ -274,106 +283,6 @@ class DockDreamService : DreamService() {
 
         // Widgets
         widgetHostManager.setEnabled(widgetsEnabled)
-    }
-
-    // ------------------------------------------------------------------
-    // Clock theme
-    // ------------------------------------------------------------------
-
-    /** Apply a preset theme that sets color, font, and position at once. */
-    private fun applyClockTheme() {
-        val theme = prefs.getString(getString(R.string.pref_key_clock_theme), "default") ?: "default"
-        when (theme) {
-            "white" -> {
-                val white = "#e0e0e0"
-                clockDisplay.setTextColor(Color.parseColor(white))
-                dateDisplay.setTextColor(Color.parseColor(white))
-                batteryStatus.setTextColor(Color.parseColor(white))
-                clockDisplay.typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
-                dateDisplay.typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
-            }
-            "amber" -> {
-                val amber = "#ffb74d"
-                clockDisplay.setTextColor(Color.parseColor(amber))
-                dateDisplay.setTextColor(Color.parseColor(amber))
-                batteryStatus.setTextColor(Color.parseColor(amber))
-                clockDisplay.typeface = Typeface.DEFAULT
-                dateDisplay.typeface = Typeface.DEFAULT
-            }
-            "green" -> {
-                val green = "#81c784"
-                clockDisplay.setTextColor(Color.parseColor(green))
-                dateDisplay.setTextColor(Color.parseColor(green))
-                batteryStatus.setTextColor(Color.parseColor(green))
-                clockDisplay.typeface = Typeface.create("sans-serif-thin", Typeface.NORMAL)
-                dateDisplay.typeface = Typeface.create("sans-serif-thin", Typeface.NORMAL)
-            }
-            "blue" -> {
-                val blue = "#64b5f6"
-                clockDisplay.setTextColor(Color.parseColor(blue))
-                dateDisplay.setTextColor(Color.parseColor(blue))
-                batteryStatus.setTextColor(Color.parseColor(blue))
-                clockDisplay.typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
-                dateDisplay.typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
-            }
-            "red" -> {
-                val red = "#e57373"
-                clockDisplay.setTextColor(Color.parseColor(red))
-                dateDisplay.setTextColor(Color.parseColor(red))
-                batteryStatus.setTextColor(Color.parseColor(red))
-                clockDisplay.typeface = Typeface.DEFAULT
-                dateDisplay.typeface = Typeface.DEFAULT
-            }
-            "purple" -> {
-                val purple = "#ce93d8"
-                clockDisplay.setTextColor(Color.parseColor(purple))
-                dateDisplay.setTextColor(Color.parseColor(purple))
-                batteryStatus.setTextColor(Color.parseColor(purple))
-                clockDisplay.typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
-                dateDisplay.typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
-            }
-            // "default" — let the color picker and font prefs drive it
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // Clock animation
-    // ------------------------------------------------------------------
-
-    private fun applyClockAnimation() {
-        cancelClockAnimation()
-        val anim = prefs.getString(getString(R.string.pref_key_clock_animation), "none") ?: "none"
-        when (anim) {
-            "drift" -> {
-                clockAnimator = android.animation.ObjectAnimator.ofFloat(
-                    clockContainer, "translationY", 0f, -20f, 0f
-                ).apply {
-                    duration = 8000
-                    repeatCount = android.animation.ValueAnimator.INFINITE
-                    repeatMode = android.animation.ValueAnimator.REVERSE
-                    interpolator = android.view.animation.AccelerateDecelerateInterpolator()
-                    start()
-                }
-            }
-            "pulse" -> {
-                clockAnimator = android.animation.ObjectAnimator.ofFloat(
-                    clockContainer, "alpha", 1f, 0.85f, 1f
-                ).apply {
-                    duration = 4000
-                    repeatCount = android.animation.ValueAnimator.INFINITE
-                    repeatMode = android.animation.ValueAnimator.REVERSE
-                    interpolator = android.view.animation.AccelerateDecelerateInterpolator()
-                    start()
-                }
-            }
-        }
-    }
-
-    private fun cancelClockAnimation() {
-        clockAnimator?.cancel()
-        clockAnimator = null
-        clockContainer.alpha = 1f
-        clockContainer.translationY = 0f
     }
 
     // ------------------------------------------------------------------
