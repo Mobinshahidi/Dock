@@ -2,6 +2,8 @@ package com.nousresearch.dock.settings
 
 import android.app.Activity
 import android.appwidget.AppWidgetManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.ContentResolver
 import android.content.Context
@@ -199,15 +201,40 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
 
-            // Auto-start guide — open system dream settings
+            // Auto-start guide — open system dream settings + ADB commands
             findPreference<Preference>("auto_start_guide")?.setOnPreferenceClickListener {
-                try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                        startActivity(Intent(Settings.ACTION_DREAM_SETTINGS))
-                    }
-                } catch (e: Exception) {
-                    // Settings may not be reachable
+                val ctx = requireContext()
+                val commands = """
+                    |adb shell settings put secure screensaver_enabled 1
+                    |adb shell settings put secure screensaver_components com.nousresearch.dock/.dream.DockDreamService
+                    |adb shell settings put secure screensaver_activate_on_dock 1
+                """.trimMargin()
+                val message = buildString {
+                    appendLine("Enable Dock as your screen saver:")
+                    appendLine()
+                    appendLine("1. Tap \"Open Settings\" below and select Dock.")
+                    appendLine("2. Set \"When to start\" → \"While charging\".")
+                    appendLine("3. Grant Unrestricted battery.")
+                    appendLine("4. Disable Battery Saver when testing.")
+                    appendLine()
+                    appendLine("If the dream doesn't auto-start, run these ADB commands (one-time):")
+                    appendLine()
+                    append(commands)
                 }
+                AlertDialog.Builder(ctx)
+                    .setTitle("Auto-start setup")
+                    .setMessage(message)
+                    .setPositiveButton("Copy commands") { _, _ ->
+                        val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("ADB commands", commands))
+                    }
+                    .setNeutralButton("Open Settings") { _, _ ->
+                        try {
+                            startActivity(Intent(Settings.ACTION_DREAM_SETTINGS))
+                        } catch (_: Exception) {}
+                    }
+                    .setNegativeButton("Close", null)
+                    .show()
                 true
             }
 
@@ -235,6 +262,47 @@ class SettingsActivity : AppCompatActivity() {
                     setBackgroundColor(currentColor)
                 }
                 root.addView(preview)
+
+                // Hex input row (created before sliders so seekbar listeners can reference it)
+                val hexRow = android.widget.LinearLayout(ctx).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).also { it.setMargins(0, 0, 0, 0) }
+                }
+                val hexLabel = android.widget.TextView(ctx).apply {
+                    text = "#"
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        (24 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    textSize = 16f
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                }
+                hexRow.addView(hexLabel)
+                val hexInput = android.widget.EditText(ctx).apply {
+                    setText(String.format("%06X", currentColor and 0xFFFFFF))
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                    )
+                    filters = arrayOf(android.text.InputFilter.LengthFilter(6))
+                    inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                    addTextChangedListener(object : android.text.TextWatcher {
+                        override fun afterTextChanged(s: android.text.Editable?) {}
+                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                            val hex = s?.toString()?.trim()?.removePrefix("#") ?: return
+                            if (hex.length != 6) return
+                            val color = try { Color.parseColor("#$hex") } catch (e: Exception) { return }
+                            root.findViewWithTag<android.widget.SeekBar>("R")?.progress = Color.red(color)
+                            root.findViewWithTag<android.widget.SeekBar>("G")?.progress = Color.green(color)
+                            root.findViewWithTag<android.widget.SeekBar>("B")?.progress = Color.blue(color)
+                            preview.setBackgroundColor(color)
+                        }
+                    })
+                }
+                hexRow.addView(hexInput)
+                root.addView(hexRow)
 
                 // Helper to build RGB slider row
                 fun addSlider(label: String, initial: Int, tag: String): android.widget.SeekBar {
@@ -278,6 +346,9 @@ class SettingsActivity : AppCompatActivity() {
                             val g = root.findViewWithTag<android.widget.SeekBar>("G")?.progress ?: 0
                             val b = root.findViewWithTag<android.widget.SeekBar>("B")?.progress ?: 0
                             preview.setBackgroundColor(android.graphics.Color.rgb(r, g, b))
+                            if (fromUser) {
+                                hexInput.setText(String.format("%02X%02X%02X", r, g, b))
+                            }
                         }
                         override fun onStartTrackingTouch(sb: android.widget.SeekBar?) {}
                         override fun onStopTrackingTouch(sb: android.widget.SeekBar?) {}
@@ -293,34 +364,6 @@ class SettingsActivity : AppCompatActivity() {
                 addSlider("R", r, "R")
                 addSlider("G", g, "G")
                 addSlider("B", b, "B")
-
-                // Hex input row
-                val hexRow = android.widget.LinearLayout(ctx).apply {
-                    orientation = android.widget.LinearLayout.HORIZONTAL
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).also { it.setMargins(0, 0, 0, 0) }
-                }
-                val hexLabel = android.widget.TextView(ctx).apply {
-                    text = "#"
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        (24 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
-                    textSize = 16f
-                    gravity = android.view.Gravity.CENTER_VERTICAL
-                }
-                hexRow.addView(hexLabel)
-                val hexInput = android.widget.EditText(ctx).apply {
-                    setText(String.format("%06X", currentColor and 0xFFFFFF))
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
-                    )
-                    filters = arrayOf(android.text.InputFilter.LengthFilter(6))
-                    inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-                }
-                hexRow.addView(hexInput)
-                root.addView(hexRow)
 
                 val dialog = AlertDialog.Builder(ctx)
                     .setTitle("Clock color")

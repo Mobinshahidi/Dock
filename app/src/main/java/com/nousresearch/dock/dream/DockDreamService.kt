@@ -7,7 +7,6 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.service.dreams.DreamService
 import android.view.LayoutInflater
-import android.view.Surface
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -69,26 +68,18 @@ class DockDreamService : DreamService() {
         // --- Load prefs ---
         prefs = PreferenceManager.getDefaultSharedPreferences(this)
 
-        // --- Inflate main layout, forcing correct orientation ---
-        // The system DreamActivity may host dreams with a fixed orientation,
-        // making resources.configuration.orientation unreliable.  We read the
-        // actual display rotation and override the configuration context so
-        // the layout-land / layout qualifier matches the physical device.
-        val display = windowManager.defaultDisplay
-        val actualOrientation = when (display.rotation) {
-            Surface.ROTATION_90, Surface.ROTATION_270 -> Configuration.ORIENTATION_LANDSCAPE
-            else -> Configuration.ORIENTATION_PORTRAIT
+        // --- Inflate main layout (always landscape) ---
+        // The system DreamActivity may host dreams with a fixed orientation
+        // that doesn't match the physical device.  We force the resource
+        // qualifier via createConfigurationContext so the landscape layout
+        // always loads — desk clocks / photo frames look best in landscape.
+        val config = Configuration(resources.configuration).apply {
+            orientation = Configuration.ORIENTATION_LANDSCAPE
         }
-        if (resources.configuration.orientation != actualOrientation) {
-            val config = Configuration(resources.configuration)
-            config.orientation = actualOrientation
-            setContentView(
-                LayoutInflater.from(createConfigurationContext(config))
-                    .inflate(R.layout.dream_dock, null)
-            )
-        } else {
-            setContentView(R.layout.dream_dock)
-        }
+        setContentView(
+            LayoutInflater.from(createConfigurationContext(config))
+                .inflate(R.layout.dream_dock, null)
+        )
         rootLayout = findViewById(R.id.dream_root)
 
         // --- Slideshow views ---
