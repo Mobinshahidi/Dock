@@ -54,7 +54,14 @@
         android:key="@string/pref_key_clock_font_size"
         android:title="@string/pref_clock_font_size_title"
         android:summary="@string/pref_clock_font_size_summary"
-        android:max="140"
+        android:max="200"
+        android:defaultValue="100" />
+
+    <SeekBarPreference
+        android:key="@string/pref_key_date_font_size"
+        android:title="@string/pref_date_font_size_title"
+        android:summary="@string/pref_date_font_size_summary"
+        android:max="200"
         android:defaultValue="100" />
 
     <ListPreference

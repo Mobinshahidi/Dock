@@ -11,7 +11,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.graphics.Color
-import android.graphics.Typeface
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -211,28 +210,132 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            // Clock color picker — show dialog with preset colors
+            // Clock color picker — full RGB + hex dialog
             findPreference<Preference>(getString(R.string.pref_key_clock_color))?.setOnPreferenceClickListener {
-                val colors = arrayOf(
-                    "#c3c2b7", "#ffffff", "#d57455", "#ff6b6b",
-                    "#51cf66", "#339af0", "#cc5de8", "#f59f00",
-                    "#e9ecef", "#adb5bd"
-                )
-                val colorNames = arrayOf(
-                    "Warm", "White", "Accent", "Red",
-                    "Green", "Blue", "Purple", "Yellow",
-                    "Light Gray", "Gray"
-                )
-                val builder = AlertDialog.Builder(requireContext())
-                builder.setTitle("Choose clock color")
-                builder.setItems(colorNames) { _, which ->
-                    PreferenceManager.getDefaultSharedPreferences(requireContext())
-                        .edit()
-                        .putString(getString(R.string.pref_key_clock_color), colors[which])
-                        .apply()
+                val ctx = requireContext()
+                val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+                val currentHex = prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
+                val currentColor = try { Color.parseColor(currentHex) } catch (e: Exception) { Color.parseColor("#c3c2b7") }
+
+                val dp = ctx.resources.displayMetrics.density
+                val padding = (16 * dp).toInt()
+
+                // Root vertical layout
+                val root = android.widget.LinearLayout(ctx).apply {
+                    orientation = android.widget.LinearLayout.VERTICAL
+                    setPadding(padding, padding, padding, 0)
                 }
-                builder.setNegativeButton("Cancel", null)
-                builder.show()
+
+                // Color preview — solid rectangle
+                val preview = View(ctx).apply {
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (80 * dp).toInt()
+                    ).also { it.setMargins(0, 0, 0, padding) }
+                    setBackgroundColor(currentColor)
+                }
+                root.addView(preview)
+
+                // Helper to build RGB slider row
+                fun addSlider(label: String, initial: Int, tag: String): android.widget.SeekBar {
+                    val row = android.widget.LinearLayout(ctx).apply {
+                        orientation = android.widget.LinearLayout.HORIZONTAL
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                        ).also { it.setMargins(0, 0, 0, (8 * dp).toInt()) }
+                    }
+                    val labelView = android.widget.TextView(ctx).apply {
+                        text = label
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            (40 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        textSize = 14f
+                    }
+                    row.addView(labelView)
+                    val seekBar = android.widget.SeekBar(ctx).apply {
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                        )
+                        max = 255
+                        progress = initial
+                    }
+                    row.addView(seekBar)
+                    val valueView = android.widget.TextView(ctx).apply {
+                        text = initial.toString()
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            (40 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        gravity = android.view.Gravity.END
+                        textSize = 14f
+                    }
+                    row.addView(valueView)
+                    root.addView(row)
+                    seekBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+                        override fun onProgressChanged(sb: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
+                            valueView.text = progress.toString()
+                            val r = root.findViewWithTag<android.widget.SeekBar>("R")?.progress ?: 0
+                            val g = root.findViewWithTag<android.widget.SeekBar>("G")?.progress ?: 0
+                            val b = root.findViewWithTag<android.widget.SeekBar>("B")?.progress ?: 0
+                            preview.setBackgroundColor(android.graphics.Color.rgb(r, g, b))
+                        }
+                        override fun onStartTrackingTouch(sb: android.widget.SeekBar?) {}
+                        override fun onStopTrackingTouch(sb: android.widget.SeekBar?) {}
+                    })
+                    seekBar.tag = tag
+                    return seekBar
+                }
+
+                val r = Color.red(currentColor)
+                val g = Color.green(currentColor)
+                val b = Color.blue(currentColor)
+
+                addSlider("R", r, "R")
+                addSlider("G", g, "G")
+                addSlider("B", b, "B")
+
+                // Hex input row
+                val hexRow = android.widget.LinearLayout(ctx).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).also { it.setMargins(0, 0, 0, 0) }
+                }
+                val hexLabel = android.widget.TextView(ctx).apply {
+                    text = "#"
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        (24 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    textSize = 16f
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                }
+                hexRow.addView(hexLabel)
+                val hexInput = android.widget.EditText(ctx).apply {
+                    setText(String.format("%06X", currentColor and 0xFFFFFF))
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                    )
+                    filters = arrayOf(android.text.InputFilter.LengthFilter(6))
+                    inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                }
+                hexRow.addView(hexInput)
+                root.addView(hexRow)
+
+                val dialog = AlertDialog.Builder(ctx)
+                    .setTitle("Clock color")
+                    .setView(root)
+                    .setPositiveButton("OK") { _, _ ->
+                        val hex = try {
+                            val rv = root.findViewWithTag<android.widget.SeekBar>("R")?.progress ?: 0
+                            val gv = root.findViewWithTag<android.widget.SeekBar>("G")?.progress ?: 0
+                            val bv = root.findViewWithTag<android.widget.SeekBar>("B")?.progress ?: 0
+                            String.format("#%02X%02X%02X", rv, gv, bv)
+                        } catch (e: Exception) { "#c3c2b7" }
+                        prefs.edit().putString(getString(R.string.pref_key_clock_color), hex).apply()
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .create()
+                dialog.show()
                 true
             }
 

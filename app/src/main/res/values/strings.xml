@@ -47,16 +47,19 @@
     <!-- Clock customization -->
     <string name="pref_key_clock_position">clock_position</string>
     <string name="pref_key_clock_font_size">clock_font_size</string>
+    <string name="pref_key_date_font_size">date_font_size</string>
     <string name="pref_key_clock_color">clock_color</string>
     <string name="pref_key_clock_font">clock_font</string>
     <string name="pref_key_clock_font_file">clock_font_file</string>
     <string name="section_clock">Clock</string>
     <string name="pref_clock_position_title">Clock position</string>
     <string name="pref_clock_position_summary">Horizontal position of the clock in landscape</string>
-    <string name="pref_clock_font_size_title">Clock font size</string>
+    <string name="pref_clock_font_size_title">Clock size</string>
     <string name="pref_clock_font_size_summary">Adjust the clock text size</string>
+    <string name="pref_date_font_size_title">Date size</string>
+    <string name="pref_date_font_size_summary">Adjust the date text size</string>
     <string name="pref_clock_color_title">Clock color</string>
-    <string name="pref_clock_color_summary">Change the clock and date text color</string>
+    <string name="pref_clock_color_summary">Set clock and date text color (tap for color picker)</string>
     <string name="pref_clock_font_title">Clock font</string>
     <string name="pref_clock_font_summary">Select or upload a custom font</string>
     <string name="clock_font_upload">Upload custom font</string>
@@ -76,7 +79,7 @@
     <!-- Auto-start -->
     <string name="section_autostart">Auto-start</string>
     <string name="pref_autostart_title">Enable auto-start on charge</string>
-    <string name="pref_autostart_summary">Open Settings → Display → Screen saver → select Dock → set to \"While charging\". Also ensure Dock has Unrestricted battery access in Settings → Apps → Dock → Battery.</string>
+    <string name="pref_autostart_summary">Tap to open dream settings. Must: (1) select Dock as screen saver, (2) set \"When to start\" to \"While charging\", (3) battery = Unrestricted, (4) disable Battery Saver when testing.</string>
 
     <!-- About -->
     <string name="section_about">About</string>

@@ -67,9 +67,7 @@
             android:textSize="@dimen/clock_text_size"
             android:format12Hour="hh:mm"
             android:format24Hour="HH:mm"
-            android:autoSizeTextType="uniform"
-            android:autoSizeMinTextSize="32sp"
-            android:autoSizeMaxTextSize="80sp" />
+
 
         <TextClock
             android:id="@+id/date_display"
