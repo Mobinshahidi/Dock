@@ -47,6 +47,25 @@ class SettingsActivity : AppCompatActivity() {
 
     class DockSettingsFragment : PreferenceFragmentCompat() {
 
+        // Preference keys whose change should repaint the live clock preview.
+        private val previewRefreshKeys: Set<String> by lazy {
+            setOf(
+                getString(R.string.pref_key_clock_style),
+                getString(R.string.pref_key_clock_color),
+                getString(R.string.pref_key_clock_font),
+                getString(R.string.pref_key_clock_font_file),
+                getString(R.string.pref_key_oled_mode),
+                getString(R.string.pref_key_night_dim)
+            )
+        }
+
+        private val prefChangeListener =
+            SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                if (key != null && key in previewRefreshKeys) {
+                    findPreference<ClockStylePreviewPreference>("clock_style_preview")?.refresh()
+                }
+            }
+
         // Photo picker launcher (OpenMultipleDocuments for persistable permissions)
         private val pickPhotosLauncher =
             registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -388,6 +407,20 @@ class SettingsActivity : AppCompatActivity() {
                 pickFontLauncher.launch(arrayOf("font/ttf", "font/otf", "application/x-font-ttf", "application/x-font-opentype"))
                 true
             }
+        }
+
+        override fun onResume() {
+            super.onResume()
+            PreferenceManager.getDefaultSharedPreferences(requireContext())
+                .registerOnSharedPreferenceChangeListener(prefChangeListener)
+            findPreference<ClockStylePreviewPreference>("clock_style_preview")?.startPreview()
+        }
+
+        override fun onPause() {
+            super.onPause()
+            PreferenceManager.getDefaultSharedPreferences(requireContext())
+                .unregisterOnSharedPreferenceChangeListener(prefChangeListener)
+            findPreference<ClockStylePreviewPreference>("clock_style_preview")?.stopPreview()
         }
 
         private fun launchWidgetPicker(slotIndex: Int) {

@@ -42,6 +42,11 @@
         android:title="@string/section_clock"
         android:layout="@layout/preference_category_custom" />
 
+    <com.nousresearch.dock.settings.ClockStylePreviewPreference
+        android:key="clock_style_preview"
+        android:persistent="false"
+        android:selectable="false" />
+
     <ListPreference
         android:key="@string/pref_key_clock_position"
         android:title="@string/pref_clock_position_title"

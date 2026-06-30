@@ -128,6 +128,7 @@
         <item>Normal</item>
         <item>Bubbly</item>
         <item>Neon</item>
+        <item>Mono</item>
         <item>Gradient</item>
         <item>Outline</item>
     </string-array>
@@ -135,6 +136,7 @@
         <item>default</item>
         <item>bubbly</item>
         <item>neon</item>
+        <item>mono</item>
         <item>gradient</item>
         <item>outline</item>
     </string-array>

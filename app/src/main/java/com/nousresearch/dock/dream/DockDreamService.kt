@@ -23,6 +23,7 @@ import androidx.preference.PreferenceManager
 import com.nousresearch.dock.R
 import com.nousresearch.dock.slideshow.PhotoSlideshowManager
 import com.nousresearch.dock.widget.WidgetHostManager
+import java.util.Calendar
 
 /**
  * Dock dream service — the charging screensaver.
@@ -96,7 +97,6 @@ class DockDreamService : DreamService() {
         loadModuleStates()
         applyClockPosition()
         applyClockCustomization()
-        applyClockStyle()
         clockDisplay.start()
         registerBatteryReceiver()
         startSlideshowIfEnabled()
@@ -108,7 +108,6 @@ class DockDreamService : DreamService() {
         loadModuleStates()
         applyClockPosition()
         applyClockCustomization()
-        applyClockStyle()
         clockDisplay.start()
         registerBatteryReceiver()
         startSlideshowIfEnabled()
@@ -236,19 +235,36 @@ class DockDreamService : DreamService() {
             else -> Typeface.DEFAULT
         }
         clockDisplay.animEnabled = animEnabled
-        clockDisplay.clockStyle = AnimatedClockView.ClockStyle.DEFAULT
-    }
 
-    /** Apply the selected clock visual style (bubbly, neon, etc.) */
-    private fun applyClockStyle() {
+        // Dim bright styles (neon/gradient) and slow idle motion when the
+        // screen is darkened, so they cooperate with OLED / night-dim mode.
+        val oled = prefs.getBoolean(getString(R.string.pref_key_oled_mode), false)
+        clockDisplay.dimmed = oled || isNightDimActive()
+
+        // Selected visual style. Set after dimmed so the idle animation that
+        // (re)starts with the style already reflects the dimmed intensity.
         val style = prefs.getString(getString(R.string.pref_key_clock_style), "default") ?: "default"
         clockDisplay.clockStyle = when (style) {
             "bubbly" -> AnimatedClockView.ClockStyle.BUBBLY
             "neon" -> AnimatedClockView.ClockStyle.NEON
+            "mono" -> AnimatedClockView.ClockStyle.MONO
             "gradient" -> AnimatedClockView.ClockStyle.GRADIENT
             "outline" -> AnimatedClockView.ClockStyle.OUTLINE
             else -> AnimatedClockView.ClockStyle.DEFAULT
         }
+    }
+
+    /**
+     * Whether the user's night-dim window is currently active. Handles windows
+     * that wrap past midnight (e.g. 22:00 → 07:00). The night-dim toggle and
+     * start/end hour prefs are shared with SettingsActivity.
+     */
+    private fun isNightDimActive(): Boolean {
+        if (!prefs.getBoolean(getString(R.string.pref_key_night_dim), true)) return false
+        val start = prefs.getString(getString(R.string.pref_key_night_dim_start), "22")?.toIntOrNull() ?: 22
+        val end = prefs.getString(getString(R.string.pref_key_night_dim_end), "7")?.toIntOrNull() ?: 7
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        return if (start <= end) hour in start until end else (hour >= start || hour < end)
     }
 
     // ------------------------------------------------------------------
