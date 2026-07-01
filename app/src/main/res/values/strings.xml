@@ -70,7 +70,7 @@
     <string name="clock_font_thin">Sans-serif Thin</string>
     <string name="pref_key_clock_style">clock_style</string>
     <string name="pref_clock_style_title">Clock style</string>
-    <string name="pref_clock_style_summary">Visual style for clock digits (bubbly, neon, etc.)</string>
+    <string name="pref_clock_style_summary">Visual style for clock digits (bubble, neon, etc.)</string>
     <string name="pref_key_show_date">show_date</string>
     <string name="pref_show_date_title">Show date</string>
     <string name="pref_show_date_summary">Display the date below the clock</string>
@@ -80,6 +80,9 @@
     <string name="pref_key_battery_font_size">battery_font_size</string>
     <string name="pref_battery_size_title">Battery text size</string>
     <string name="pref_battery_size_summary">Adjust the text size of the battery percentage</string>
+    <string name="pref_key_clock_24h">clock_24h</string>
+    <string name="pref_clock_24h_title">24-hour format</string>
+    <string name="pref_clock_24h_summary">Show 24-hour time (14:30) instead of 12-hour (2:30)</string>
     <string name="pref_key_transition_animation">transition_animation</string>
     <string name="pref_transition_title">Digit transition animation</string>
     <string name="pref_transition_summary">Animate digits when the minute changes</string>

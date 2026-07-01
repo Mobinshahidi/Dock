@@ -96,6 +96,12 @@
         android:defaultValue="default" />
 
     <SwitchPreferenceCompat
+        android:key="@string/pref_key_clock_24h"
+        android:title="@string/pref_clock_24h_title"
+        android:summary="@string/pref_clock_24h_summary"
+        android:defaultValue="true" />
+
+    <SwitchPreferenceCompat
         android:key="@string/pref_key_transition_animation"
         android:title="@string/pref_transition_title"
         android:summary="@string/pref_transition_summary"

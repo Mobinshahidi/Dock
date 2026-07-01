@@ -74,7 +74,7 @@ class DockDreamService : DreamService() {
 
     // Shake / accelerometer
     private var sensorManager: SensorManager? = null
-    private var lastShakeMs = 0L
+    private var lastShakeTriggerMs = 0L
 
     private val shakeListener = object : SensorEventListener {
         private val SHAKE_THRESHOLD = 12f
@@ -83,21 +83,17 @@ class DockDreamService : DreamService() {
             val x = event.values[0]
             val y = event.values[1]
             val z = event.values[2]
-            val magnitude = sqrt(x * x + y * y + z * z) - SensorManager.GRAVITY_EARTH
-            if (magnitude > SHAKE_THRESHOLD) {
-                lastShakeMs = System.currentTimeMillis()
+            val gForce = sqrt(x * x + y * y + z * z) - SensorManager.GRAVITY_EARTH
+            if (gForce <= SHAKE_THRESHOLD) return
+            // Debounce so a single shake fires one spring, but sustained shaking
+            // keeps re-triggering (onShake restarts the wobble each time).
+            val now = System.currentTimeMillis()
+            if (now - lastShakeTriggerMs < 250) return
+            lastShakeTriggerMs = now
+            if (::clockDisplay.isInitialized) {
+                val g = SensorManager.GRAVITY_EARTH
+                clockDisplay.onShake(x / g, y / g)
             }
-            // Smooth time-based decay: full impact for 100ms, then linear
-            // fade to zero over ~1.9s.
-            val elapsed = System.currentTimeMillis() - lastShakeMs
-            val decay = when {
-                elapsed > 2000 -> 0f
-                elapsed > 100  -> 1f - (elapsed - 100) / 1900f
-                else           -> 1f
-            }
-            clockDisplay.shakeOffsetX = decay * (x / 20f)
-            clockDisplay.shakeOffsetY = decay * (y / 20f)
-            if (decay > 0.01f) clockDisplay.postInvalidate()
         }
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
     }
@@ -301,6 +297,7 @@ class DockDreamService : DreamService() {
             else -> Typeface.DEFAULT
         }
         clockDisplay.animEnabled = animEnabled
+        clockDisplay.is24Hour = prefs.getBoolean(getString(R.string.pref_key_clock_24h), true)
 
         // Dim bright styles (neon/gradient) and slow idle motion when the
         // screen is darkened, so they cooperate with OLED / night-dim mode.
@@ -312,7 +309,6 @@ class DockDreamService : DreamService() {
         val style = prefs.getString(getString(R.string.pref_key_clock_style), "default") ?: "default"
         clockDisplay.clockStyle = when (style) {
             "bubble" -> AnimatedClockView.ClockStyle.BUBBLE
-            "bubbly" -> AnimatedClockView.ClockStyle.BUBBLY
             "neon" -> AnimatedClockView.ClockStyle.NEON
             "mono" -> AnimatedClockView.ClockStyle.MONO
             "gradient" -> AnimatedClockView.ClockStyle.GRADIENT
@@ -407,7 +403,9 @@ class DockDreamService : DreamService() {
     private fun registerSensor() {
         sensorManager = getSystemService(SENSOR_SERVICE) as? SensorManager
         sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { accel ->
-            sensorManager?.registerListener(shakeListener, accel, SensorManager.SENSOR_DELAY_NORMAL)
+            // UI delay: fast enough to catch a shake impulse, still light on power
+            // (the wobble animation itself is driven by the view, not the sensor).
+            sensorManager?.registerListener(shakeListener, accel, SensorManager.SENSOR_DELAY_UI)
         }
     }
 

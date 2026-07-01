@@ -51,6 +51,7 @@ class SettingsActivity : AppCompatActivity() {
         private val previewRefreshKeys: Set<String> by lazy {
             setOf(
                 getString(R.string.pref_key_clock_style),
+                getString(R.string.pref_key_clock_24h),
                 getString(R.string.pref_key_clock_color),
                 getString(R.string.pref_key_clock_font),
                 getString(R.string.pref_key_clock_font_file),

@@ -88,10 +88,11 @@ class ClockStylePreviewPreference @JvmOverloads constructor(
         val oled = prefs.getBoolean(context.getString(R.string.pref_key_oled_mode), false)
         v.dimmed = oled || isNightDimActive(prefs)
 
+        v.is24Hour = prefs.getBoolean(context.getString(R.string.pref_key_clock_24h), true)
+
         val style = prefs.getString(context.getString(R.string.pref_key_clock_style), "default") ?: "default"
         v.clockStyle = when (style) {
             "bubble" -> AnimatedClockView.ClockStyle.BUBBLE
-            "bubbly" -> AnimatedClockView.ClockStyle.BUBBLY
             "neon" -> AnimatedClockView.ClockStyle.NEON
             "mono" -> AnimatedClockView.ClockStyle.MONO
             "gradient" -> AnimatedClockView.ClockStyle.GRADIENT

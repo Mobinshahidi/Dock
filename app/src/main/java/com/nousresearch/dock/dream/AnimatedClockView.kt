@@ -1,6 +1,5 @@
 package com.nousresearch.dock.dream
 
-import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Bitmap
@@ -12,7 +11,6 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
-import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.os.Handler
@@ -25,26 +23,27 @@ import android.view.animation.LinearInterpolator
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.exp
 import kotlin.math.sin
 
 /**
- * Custom-drawn HH:mm clock with per-second ticking, a 400ms time-change
- * animation, and a set of visual "clock styles" (StandBy-inspired).
+ * Custom-drawn clock with per-second ticking, a short time-change animation,
+ * shake-reactive physics, and a set of visual "clock styles".
  *
- * Idle animations (breathing pulse, neon hue cycle, gradient sweep) are
- * driven by [ValueAnimator]/[ObjectAnimator] — never a self-scheduling
- * invalidate() loop — and are throttled to ~30fps to stay power-friendly
- * for a screensaver that runs for hours while charging.
+ * Motion sources, all self-contained and lifecycle-safe:
+ *  - Idle animations (neon hue cycle, gradient sweep) — [ValueAnimator], ~30fps
+ *    throttled, INFINITE, cancelled in [stop]/[onDetachedFromWindow].
+ *  - Shake — [onShake] runs a brief decaying-spring [ValueAnimator]; every style
+ *    wobbles via [shakeOffset]. Transient (~1.1s) then settles, so it costs
+ *    nothing at rest.
  *
- * Lifecycle: every animator started here is cancelled in [stop] AND in
- * [onDetachedFromWindow], so nothing leaks when the dream tears the view
- * tree down on rotation or when dreaming stops.  Callers MUST call [stop]
- * before discarding/replacing the view; the detach hook is a safety net.
+ * Callers MUST call [stop] before discarding/replacing the view; the detach
+ * hook is a safety net so animators never outlive the view on rotation.
  */
 class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
     enum class ClockStyle {
-        DEFAULT, BUBBLY, NEON, MONO, GRADIENT, OUTLINE, BUBBLE
+        DEFAULT, NEON, MONO, GRADIENT, OUTLINE, BUBBLE
     }
 
     var clockStyle: ClockStyle = ClockStyle.DEFAULT
@@ -52,16 +51,14 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
             if (field == value) return
             field = value
             invalidateGlowCache()
-            // Switching style swaps which idle animation should run.
             restartIdleAnimationIfRunning()
-            requestLayout() // padding/glow extents differ per style
+            requestLayout()
             invalidate()
         }
 
     /**
      * When true (OLED / night-dim active) bright effects are toned down and
-     * idle motion slowed, so the styles cooperate with a darkened screen
-     * instead of fighting it.
+     * idle motion slowed, so the styles cooperate with a darkened screen.
      */
     var dimmed: Boolean = false
         set(value) {
@@ -97,23 +94,33 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
 
     var animEnabled: Boolean = true
 
-    /** Applied by DockDreamService from accelerometer data — per-digit wobble offset. */
-    var shakeOffsetX: Float = 0f
-    var shakeOffsetY: Float = 0f
+    /** 24-hour (HH:mm) vs 12-hour (h:mm) time format. */
+    var is24Hour: Boolean = true
+        set(value) {
+            if (field == value) return
+            field = value
+            timeFormat = SimpleDateFormat(if (value) "HH:mm" else "h:mm", Locale.getDefault())
+            displayText = timeFormat.format(Calendar.getInstance().time)
+            invalidateGlowCache()
+            requestLayout()
+            invalidate()
+        }
 
     /**
-     * Measure "HH:mm" at various sizes and return the largest that fits
-     * within [availableWidth] pixels.  Called from DockDreamService after
-     * the layout pass so [clockContainer] dimensions are known.
+     * Measure the current time at various sizes and return the largest that
+     * fits within [availableWidth]. Called by DockDreamService after layout so
+     * the clock never overflows its container (orientation-responsive).
      */
     fun computeFittingTextSize(availableWidth: Int): Float {
-        val text = if (displayText.isNotEmpty()) displayText else "88:88"
+        val text = if (displayText.isNotEmpty()) displayText else if (is24Hour) "88:88" else "8:88"
+        // BUBBLE lays digits out wider (dot gap + heavy stroke); reserve margin.
+        val target = if (clockStyle == ClockStyle.BUBBLE) availableWidth * 0.80f else availableWidth.toFloat()
         var lo = 8f
         var hi = clockSize
         while (hi - lo > 1f) {
             val mid = (lo + hi) / 2f
             paint.textSize = mid
-            if (paint.measureText(text) <= availableWidth) lo = mid else hi = mid
+            if (paint.measureText(text) <= target) lo = mid else hi = mid
         }
         paint.textSize = clockSize // restore
         return lo
@@ -143,10 +150,15 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
     // Idle animation state
     private var isRunning = false
     private val idleAnimators = mutableListOf<ValueAnimator>()
-    private var bubblyAnimators: List<ObjectAnimator> = emptyList()
     private var neonHue = 0f
     private var gradientPhase = 0f
     private val gradientMatrix = Matrix()
+
+    // Shake state (transient, user-triggered)
+    private var shakeAnimator: ValueAnimator? = null
+    private var shakeFraction = 1f // 1 = settled / no shake
+    private var shakeDirX = 0f
+    private var shakeDirY = 0f
 
     // Neon glow cache (regenerated only when the rendered glyphs change — ~1/min)
     private var glowBitmap: Bitmap? = null
@@ -155,7 +167,7 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
     // 30fps redraw throttle for the idle ValueAnimators
     private var lastIdleInvalidateMs = 0L
 
-    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    private var timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     private val handler = Handler(Looper.getMainLooper())
     private val tickRunnable = object : Runnable {
@@ -166,10 +178,10 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
                 prevText = displayText
                 displayText = newText
                 invalidateGlowCache()
-                if (animEnabled) animateChange()
+                // BUBBLE is intentionally static — no minute-change animation.
+                if (animEnabled && clockStyle != ClockStyle.BUBBLE) animateChange()
             }
             invalidate()
-            // Re-sync to the next whole-second boundary
             val delay = 1000L - System.currentTimeMillis() % 1000L
             handler.postDelayed(this, delay)
         }
@@ -179,7 +191,7 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         animFraction = 0f
         animator?.cancel()
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 400L
+            duration = 420L
             interpolator = AccelerateDecelerateInterpolator()
             addUpdateListener {
                 animFraction = it.animatedFraction
@@ -195,7 +207,7 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
 
     fun start() {
         isRunning = true
-        tickRunnable.run() // immediate first tick
+        tickRunnable.run()
         startIdleAnimation()
     }
 
@@ -203,16 +215,50 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         isRunning = false
         handler.removeCallbacks(tickRunnable)
         animator?.cancel()
+        shakeAnimator?.cancel()
+        shakeFraction = 1f
         stopIdleAnimation()
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        // Safety net: never let animators outlive the view (rotation teardown).
         stop()
         glowBitmap?.recycle()
         glowBitmap = null
         glowCacheKey = null
+    }
+
+    // ------------------------------------------------------------------
+    // Shake physics
+    // ------------------------------------------------------------------
+
+    /**
+     * Trigger a shake wobble in the given (normalized) direction. Runs a brief
+     * decaying spring; repeated calls restart it so continuous shaking keeps the
+     * clock jiggling. Cheap and self-terminating — nothing animates at rest.
+     */
+    fun onShake(dirX: Float, dirY: Float) {
+        shakeDirX = dirX.coerceIn(-1f, 1f)
+        shakeDirY = dirY.coerceIn(-1f, 1f)
+        shakeAnimator?.cancel()
+        shakeFraction = 0f
+        shakeAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 1100L
+            interpolator = LinearInterpolator()
+            addUpdateListener {
+                shakeFraction = it.animatedFraction
+                invalidate()
+            }
+            start()
+        }
+    }
+
+    /** Current springy offset for an element at [phase], scaled by [amp] px. */
+    private fun shakeOffset(phase: Float, amp: Float): Pair<Float, Float> {
+        if (shakeFraction >= 1f) return 0f to 0f
+        val decay = exp(-3.4f * shakeFraction)
+        val osc = sin(shakeFraction * 26f + phase) * decay
+        return Pair(shakeDirX * osc * amp, shakeDirY * osc * amp)
     }
 
     // ------------------------------------------------------------------
@@ -227,45 +273,18 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         stopIdleAnimation()
         if (!isRunning) return
         when (clockStyle) {
-            ClockStyle.BUBBLY -> startBubblyPulse()
             ClockStyle.NEON -> startNeonHueCycle()
             ClockStyle.GRADIENT -> startGradientSweep()
-            // BUBBLE reuses the gradient-phase animator to drive both its
-            // shimmering gradient and the gentle idle bob of the colon dots.
-            ClockStyle.BUBBLE -> startGradientSweep()
-            else -> { /* Classic / Mono / Outline are intentionally still */ }
+            // BUBBLE / Classic / Mono / Outline are intentionally static.
+            else -> {}
         }
     }
 
     private fun stopIdleAnimation() {
         idleAnimators.forEach { it.cancel() }
         idleAnimators.clear()
-        bubblyAnimators.forEach { it.cancel() }
-        bubblyAnimators = emptyList()
-        // Reset any compositor transform the pulse left behind.
-        scaleX = 1f
-        scaleY = 1f
     }
 
-    /**
-     * Gentle breathing pulse.  Animates the view's scale on the compositor
-     * (no onDraw / invalidate), which is the cheapest possible idle effect.
-     */
-    private fun startBubblyPulse() {
-        val peak = if (dimmed) 1.01f else 1.02f
-        val sx = ObjectAnimator.ofFloat(this, SCALE_X, 1f, peak)
-        val sy = ObjectAnimator.ofFloat(this, SCALE_Y, 1f, peak)
-        for (a in listOf(sx, sy)) {
-            a.duration = 3500L
-            a.repeatMode = ObjectAnimator.REVERSE
-            a.repeatCount = ObjectAnimator.INFINITE
-            a.interpolator = AccelerateDecelerateInterpolator()
-            a.start()
-        }
-        bubblyAnimators = listOf(sx, sy)
-    }
-
-    /** Slow hue rotation across the neon glow color (~9s, ~16s when dimmed). */
     private fun startNeonHueCycle() {
         val anim = ValueAnimator.ofFloat(0f, 360f).apply {
             duration = if (dimmed) 16000L else 9000L
@@ -281,7 +300,6 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         idleAnimators.add(anim)
     }
 
-    /** Looping gradient sweep across the digits (~4s, ~7s when dimmed). */
     private fun startGradientSweep() {
         val anim = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = if (dimmed) 7000L else 4000L
@@ -297,7 +315,6 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         idleAnimators.add(anim)
     }
 
-    /** Cap idle-driven redraws at ~30fps regardless of display refresh rate. */
     private fun throttledIdleInvalidate() {
         val now = System.currentTimeMillis()
         if (now - lastIdleInvalidateMs >= 33L) {
@@ -317,11 +334,9 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         paint.strokeWidth = 0f
         val textWidth = paint.measureText("00:00")
         val textHeight = paint.fontMetrics.let { it.bottom - it.top }
-        // Extra room so glow / rounded strokes / shadow are not clipped.
         val extra = when (clockStyle) {
             ClockStyle.NEON -> clockSize * 0.5f
-            ClockStyle.BUBBLY -> clockSize * 0.2f
-            ClockStyle.BUBBLE -> clockSize * 0.22f
+            ClockStyle.BUBBLE -> clockSize * 0.28f
             ClockStyle.GRADIENT -> clockSize * 0.1f
             ClockStyle.OUTLINE -> 3f * density
             else -> 0f
@@ -345,7 +360,7 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         val cx = width / 2f
         val cy = height / 2f
 
-        // Reset shared paint state every frame so styles never bleed into each other.
+        // Reset shared paint state every frame so styles never bleed together.
         paint.color = clockColor
         paint.textSize = clockSize
         paint.typeface = effectiveTypeface()
@@ -357,13 +372,13 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         paint.maskFilter = null
         paint.clearShadowLayer()
         paint.alpha = 255
+        paint.textAlign = Paint.Align.CENTER
 
         val textY = cy - (paint.fontMetrics.ascent + paint.fontMetrics.descent) / 2f
 
         when (clockStyle) {
             ClockStyle.DEFAULT -> drawPlain(canvas, cx, textY)
             ClockStyle.MONO -> drawPlain(canvas, cx, textY)
-            ClockStyle.BUBBLY -> drawBubbly(canvas, cx, textY)
             ClockStyle.NEON -> drawNeon(canvas, cx, textY)
             ClockStyle.GRADIENT -> drawGradient(canvas, cx, cy, textY)
             ClockStyle.OUTLINE -> drawOutline(canvas, cx, textY)
@@ -373,68 +388,6 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
 
     private fun drawPlain(canvas: Canvas, cx: Float, textY: Float) {
         drawTextWithAnim(canvas, cx, textY)
-    }
-
-    private fun drawBubbly(canvas: Canvas, cx: Float, textY: Float) {
-        val chars = displayText.toCharArray()
-        val charWidths = FloatArray(chars.size)
-        paint.getTextWidths(displayText, charWidths)
-        val totalWidth = charWidths.sum()
-        val capH = paint.textSize * 1.35f
-        val corner = capH * 0.45f
-        val hPad = paint.textSize * 0.2f
-        val startX = cx - totalWidth / 2f
-        val capTop = height / 2f - capH / 2f
-        val capsulePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-
-        // Each digit drawn inside its own rounded capsule. The capsule uses a
-        // very subtle gradient fill (barely lighter than the background) and a
-        // thin border. When shake is active, each digit independently wavers.
-        var x = startX
-        for (i in chars.indices) {
-            val cw = charWidths[i]
-
-            // Shake per-digit using a sine offset derived from shakeOffset
-            val wobble = if (shakeOffsetX != 0f || shakeOffsetY != 0f) {
-                val phase = i * 1.2f
-                val inAng = sin((System.currentTimeMillis() * 0.008).toFloat() + phase)
-                val outAng = sin((System.currentTimeMillis() * 0.006).toFloat() + phase)
-                Pair(shakeOffsetX * inAng * 4f, shakeOffsetY * outAng * 4f)
-            } else Pair(0f, 0f)
-
-            val rx = x + wobble.first
-            val ry = capTop + wobble.second
-
-            // Capsule background
-            capsulePaint.color = clockColor
-            capsulePaint.alpha = 18
-            val rect = RectF(rx - hPad, ry, rx + cw + hPad, ry + capH)
-            canvas.drawRoundRect(rect, corner, corner, capsulePaint)
-
-            // Capsule border
-            capsulePaint.alpha = 50
-            capsulePaint.style = Paint.Style.STROKE
-            capsulePaint.strokeWidth = 1.2f * density
-            canvas.drawRoundRect(rect, corner, corner, capsulePaint)
-            capsulePaint.style = Paint.Style.FILL
-
-            // Digit
-            val digit = String(charArrayOf(chars[i]))
-            if (animFraction < 1f && i < 2 && prevText.length > i && prevText[i] != chars[i]) {
-                val oldAlpha = paint.alpha
-                paint.alpha = (oldAlpha * (1f - animFraction)).coerceIn(0f, 255f).toInt()
-                canvas.drawText(String(charArrayOf(prevText[i])), x + cw / 2f + wobble.first,
-                    textY + wobble.second - (1f - animFraction) * 30f, paint)
-                paint.alpha = (oldAlpha * animFraction).coerceIn(0f, 255f).toInt()
-                canvas.drawText(digit, x + cw / 2f + wobble.first,
-                    textY + wobble.second + (1f - animFraction) * 30f, paint)
-                paint.alpha = oldAlpha
-            } else {
-                canvas.drawText(digit, x + cw / 2f + wobble.first,
-                    textY + wobble.second, paint)
-            }
-            x += cw + hPad * 2
-        }
     }
 
     private fun drawNeon(canvas: Canvas, cx: Float, textY: Float) {
@@ -447,7 +400,6 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
             glowPaint.alpha = if (dimmed) 90 else 200
             canvas.drawBitmap(glow, 0f, 0f, glowPaint)
         }
-        // Crisp digits on top of the halo.
         paint.color = clockColor
         drawTextWithAnim(canvas, cx, textY)
     }
@@ -477,22 +429,22 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
     }
 
     /**
-     * iOS StandBy-inspired style: heavy rounded numerals filled with a vivid
-     * horizontal gradient, and the colon drawn as two soft dots. Each element
-     * (HH, mm, and both dots) wobbles independently — a gentle idle bob at rest
-     * and a springy bounce on shake, so it feels like floating bubbles.
+     * iOS StandBy-inspired style: very heavy, rounded numerals filled with a
+     * vivid horizontal gradient (centered on the chosen clock color), with the
+     * colon drawn as two soft dots. Static at rest; on shake, each element
+     * (HH, mm, both dots) springs independently like bouncing bubbles.
      */
     private fun drawBubble(canvas: Canvas, cx: Float, cy: Float, textY: Float) {
-        if (displayText.length < 5) { drawPlain(canvas, cx, textY); return }
-        val hh = displayText.substring(0, 2)
-        val mm = displayText.substring(3, 5)
+        val parts = displayText.split(":")
+        if (parts.size < 2) { drawPlain(canvas, cx, textY); return }
+        val hh = parts[0]
+        val mm = parts[1]
 
-        // Heavy, rounded numerals (fake-rounded via a thick round stroke fused
-        // to the fill — no bundled font required).
+        // Fat rounded glyphs: bold face + a heavy round stroke fused to the fill.
         paint.style = Paint.Style.FILL_AND_STROKE
         paint.strokeJoin = Paint.Join.ROUND
         paint.strokeCap = Paint.Cap.ROUND
-        paint.strokeWidth = clockSize * 0.045f
+        paint.strokeWidth = clockSize * 0.11f
         paint.textAlign = Paint.Align.LEFT
 
         val hhW = paint.measureText(hh)
@@ -505,84 +457,52 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         val (c1, c2) = bubbleGradientColors()
         paint.shader = LinearGradient(startX, 0f, startX + totalW, 0f, c1, c2, Shader.TileMode.CLAMP)
 
-        val wHH = bubbleWobble(0f, clockSize * 0.05f)
+        val wHH = shakeOffset(0f, clockSize * 0.06f)
         canvas.drawText(hh, startX + wHH.first, textY + wHH.second, paint)
-        val wMM = bubbleWobble(2.4f, clockSize * 0.05f)
+        val wMM = shakeOffset(2.4f, clockSize * 0.06f)
         canvas.drawText(mm, startX + hhW + gap + wMM.first, textY + wMM.second, paint)
         paint.shader = null
 
-        // Colon = two dots that bounce hardest on shake.
+        // Colon dots bounce hardest.
         val dotCx = startX + hhW + gap / 2f
         dotPaint.color = bubbleDotColor()
-        val wTop = bubbleWobble(1.1f, clockSize * 0.09f)
-        val wBot = bubbleWobble(3.7f, clockSize * 0.09f)
+        val wTop = shakeOffset(1.1f, clockSize * 0.11f)
+        val wBot = shakeOffset(3.7f, clockSize * 0.11f)
         canvas.drawCircle(dotCx + wTop.first, cy - dotR * 1.5f + wTop.second, dotR, dotPaint)
         canvas.drawCircle(dotCx + wBot.first, cy + dotR * 1.5f + wBot.second, dotR, dotPaint)
 
-        // Restore shared paint defaults for the next frame/style.
         paint.style = Paint.Style.FILL
         paint.strokeWidth = 0f
         paint.textAlign = Paint.Align.CENTER
     }
 
     /**
-     * Per-element offset for BUBBLE: a slow idle bob (driven by the gradient
-     * phase animator) plus a springy shake response when the device is moved.
-     */
-    private fun bubbleWobble(phase: Float, amp: Float): Pair<Float, Float> {
-        val idle = sin(gradientPhase * 6.2832f + phase) * (clockSize * 0.012f)
-        if (shakeOffsetX == 0f && shakeOffsetY == 0f) return Pair(0f, idle)
-        val t = (System.currentTimeMillis() * 0.012).toFloat()
-        val sx = shakeOffsetX * sin(t + phase) * amp
-        val sy = shakeOffsetY * sin(t * 0.8f + phase) * amp
-        return Pair(sx, idle + sy)
-    }
-
-    private fun bubbleGradientColors(): Pair<Int, Int> {
-        val hsv = FloatArray(3)
-        Color.colorToHSV(clockColor, hsv)
-        val s = maxOf(hsv[1], 0.75f)
-        val v = if (dimmed) minOf(hsv[2], 0.6f) else maxOf(hsv[2], 0.9f)
-        val h = hsv[0]
-        val c1 = Color.HSVToColor(floatArrayOf((h - 28f + 360f) % 360f, s, v))
-        val c2 = Color.HSVToColor(floatArrayOf((h + 28f) % 360f, s, v))
-        return Pair(c1, c2)
-    }
-
-    private fun bubbleDotColor(): Int {
-        val hsv = FloatArray(3)
-        Color.colorToHSV(clockColor, hsv)
-        return Color.HSVToColor(floatArrayOf(hsv[0], hsv[1] * 0.2f, if (dimmed) 0.55f else 0.92f))
-    }
-
-    /**
-     * Draws [displayText] with the active paint, layering the brief
-     * slide/fade time-change animation when one is in progress.
+     * Draws [displayText] with the active paint plus a whole-clock shake offset.
+     * During a minute change, the old time fades out while the new one fades in
+     * with a soft scale-up pop (cleaner than a slide).
      */
     private fun drawTextWithAnim(canvas: Canvas, cx: Float, textY: Float) {
-        val oldAlpha = paint.alpha
-        val shakeX: Float
-        val shakeY: Float
-        if (shakeOffsetX != 0f || shakeOffsetY != 0f) {
-            val t = (System.currentTimeMillis() * 0.01).toFloat()
-            shakeX = shakeOffsetX * sin(t) * 3f
-            shakeY = shakeOffsetY * sin(t * 0.7f) * 3f
-        } else {
-            shakeX = 0f
-            shakeY = 0f
-        }
-        val drawCx = cx + shakeX
-        val drawTextY = textY + shakeY
+        val (sxo, syo) = shakeOffset(0f, clockSize * 0.06f)
+        val baseX = cx + sxo
+        val baseY = textY + syo
 
-        if (animFraction < 1f && prevText.isNotEmpty()) {
-            val slide = (1f - animFraction) * 40f
-            paint.alpha = (oldAlpha * (1f - animFraction)).coerceIn(0f, 255f).toInt()
-            canvas.drawText(prevText, drawCx, drawTextY - slide, paint)
+        if (animEnabled && animFraction < 1f && prevText.isNotEmpty()) {
+            val oldAlpha = paint.alpha
+            // Outgoing: fade out (quadratic so it clears quickly).
+            val outA = (1f - animFraction) * (1f - animFraction)
+            paint.alpha = (oldAlpha * outA).coerceIn(0f, 255f).toInt()
+            canvas.drawText(prevText, baseX, baseY, paint)
+            // Incoming: fade + scale-up pop.
+            val scale = 0.82f + 0.18f * animFraction
+            val pivotY = baseY - clockSize * 0.33f
+            canvas.save()
+            canvas.scale(scale, scale, baseX, pivotY)
             paint.alpha = (oldAlpha * animFraction).coerceIn(0f, 255f).toInt()
-            canvas.drawText(displayText, drawCx, drawTextY + slide, paint)
+            canvas.drawText(displayText, baseX, baseY, paint)
+            canvas.restore()
             paint.alpha = oldAlpha
         } else {
-            canvas.drawText(displayText, drawCx, drawTextY, paint)
+            canvas.drawText(displayText, baseX, baseY, paint)
         }
     }
 
@@ -596,11 +516,10 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
 
     /**
      * Renders a blurred white silhouette of the current time into an offscreen
-     * bitmap (heavy [BlurMaskFilter] work done once per glyph change, ~1/min).
-     * The halo is recolored cheaply per frame via a color filter, so the hue
-     * cycle costs almost nothing.  Chosen over [android.graphics.RenderEffect]
-     * because RenderEffect blurs the whole view (crisp digits included), while
-     * we want the blur strictly behind sharp text; this also works below API 31.
+     * bitmap (heavy [BlurMaskFilter] work done once per glyph change, ~1/min);
+     * recolored cheaply per frame via a color filter for the hue cycle. Chosen
+     * over RenderEffect because RenderEffect blurs the whole view (crisp digits
+     * included) — we want the blur strictly behind sharp text; also works < API 31.
      */
     private fun ensureGlowBitmap(textY: Float) {
         val w = width
@@ -635,10 +554,26 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
             ClockStyle.NEON -> Typeface.create("sans-serif-thin", Typeface.NORMAL)
             ClockStyle.MONO -> Typeface.MONOSPACE
             ClockStyle.GRADIENT -> Typeface.create(base, Typeface.BOLD)
-            ClockStyle.BUBBLY -> Typeface.create(base, Typeface.BOLD)
             ClockStyle.BUBBLE -> Typeface.create(base, Typeface.BOLD)
             else -> base
         }
+    }
+
+    private fun bubbleGradientColors(): Pair<Int, Int> {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(clockColor, hsv)
+        val s = maxOf(hsv[1], 0.72f)
+        val v = if (dimmed) minOf(hsv[2], 0.6f) else maxOf(hsv[2], 0.9f)
+        val h = hsv[0]
+        val c1 = Color.HSVToColor(floatArrayOf((h - 28f + 360f) % 360f, s, v))
+        val c2 = Color.HSVToColor(floatArrayOf((h + 28f) % 360f, s, v))
+        return Pair(c1, c2)
+    }
+
+    private fun bubbleDotColor(): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(clockColor, hsv)
+        return Color.HSVToColor(floatArrayOf(hsv[0], hsv[1] * 0.18f, if (dimmed) 0.55f else 0.92f))
     }
 
     private fun lighten(color: Int, amount: Float): Int {

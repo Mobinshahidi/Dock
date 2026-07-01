@@ -127,7 +127,6 @@
     <string-array name="clock_style_labels">
         <item>Normal</item>
         <item>Bubble</item>
-        <item>Bubbly</item>
         <item>Neon</item>
         <item>Mono</item>
         <item>Gradient</item>
@@ -136,7 +135,6 @@
     <string-array name="clock_style_values">
         <item>default</item>
         <item>bubble</item>
-        <item>bubbly</item>
         <item>neon</item>
         <item>mono</item>
         <item>gradient</item>
