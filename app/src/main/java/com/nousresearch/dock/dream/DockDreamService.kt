@@ -12,8 +12,11 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.content.res.Resources
 import android.net.Uri
 import android.os.BatteryManager
+import android.os.Handler
+import android.os.Looper
 import android.service.dreams.DreamService
 import android.view.LayoutInflater
 import android.view.Surface
@@ -63,6 +66,11 @@ class DockDreamService : DreamService() {
 
     // Battery receiver
     private var batteryReceiver: BroadcastReceiver? = null
+
+    // Resources for the orientation actually being displayed (the dream can be
+    // built against a forced orientation, so base dimens must come from here,
+    // not the possibly-mismatched default resources).
+    private lateinit var displayResources: Resources
 
     // Shake / accelerometer
     private var sensorManager: SensorManager? = null
@@ -148,6 +156,7 @@ class DockDreamService : DreamService() {
         registerBatteryReceiver()
         startSlideshowIfEnabled()
         widgetHostManager.start()
+        startDimScheduler()
     }
 
     override fun onDreamingStopped() {
@@ -157,6 +166,7 @@ class DockDreamService : DreamService() {
         unregisterBatteryReceiver()
         slideshowManager.stop()
         widgetHostManager.stop()
+        stopDimScheduler()
     }
 
     /** Hide system bars for an immersive dream experience. */
@@ -188,15 +198,16 @@ class DockDreamService : DreamService() {
     /** Inflates the correct layout based on physical rotation and sets up all views. */
     private fun setupContentView(forceOrientation: Int? = null) {
         val actualOrientation = forceOrientation ?: currentPhysicalOrientation()
-        val view = if (resources.configuration.orientation != actualOrientation) {
+        val displayContext = if (resources.configuration.orientation != actualOrientation) {
             val config = Configuration(resources.configuration).apply {
                 orientation = actualOrientation
             }
-            LayoutInflater.from(createConfigurationContext(config))
-                .inflate(R.layout.dream_dock, null)
+            createConfigurationContext(config)
         } else {
-            LayoutInflater.from(this).inflate(R.layout.dream_dock, null)
+            this
         }
+        displayResources = displayContext.resources
+        val view = LayoutInflater.from(displayContext).inflate(R.layout.dream_dock, null)
         setContentView(view)
 
         rootLayout = findViewById(R.id.dream_root)
@@ -251,8 +262,14 @@ class DockDreamService : DreamService() {
         val fontOption = prefs.getString(getString(R.string.pref_key_clock_font), "default") ?: "default"
         val animEnabled = prefs.getBoolean(getString(R.string.pref_key_transition_animation), true)
 
-        val baseClockSize = resources.getDimension(R.dimen.clock_text_size)
+        val baseClockSize = displayResources.getDimension(R.dimen.clock_text_size)
         clockDisplay.clockSize = baseClockSize * clockPercent / 100f
+
+        // Date size: responsive to orientation (dimens differ per layout) and
+        // scaled by the user's date-size preference.
+        val datePercent = prefs.getInt(getString(R.string.pref_key_date_font_size), 100)
+        val baseDatePx = displayResources.getDimension(R.dimen.date_text_size)
+        dateDisplay.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, baseDatePx * datePercent / 100f)
 
         // Responsive: cap clockSize so it never overflows the clockContainer.
         // Post a one-shot measurement after layout pass.
@@ -294,6 +311,7 @@ class DockDreamService : DreamService() {
         // (re)starts with the style already reflects the dimmed intensity.
         val style = prefs.getString(getString(R.string.pref_key_clock_style), "default") ?: "default"
         clockDisplay.clockStyle = when (style) {
+            "bubble" -> AnimatedClockView.ClockStyle.BUBBLE
             "bubbly" -> AnimatedClockView.ClockStyle.BUBBLY
             "neon" -> AnimatedClockView.ClockStyle.NEON
             "mono" -> AnimatedClockView.ClockStyle.MONO
@@ -446,11 +464,56 @@ class DockDreamService : DreamService() {
     }
 
     private fun applyBrightnessOverride() {
-        val brightness = prefs.getFloat(getString(R.string.pref_key_brightness), -1f)
-        if (brightness in 0f..1f) {
-            val lp = window?.attributes
-            lp?.screenBrightness = brightness
-            window?.attributes = lp
+        val lp = window?.attributes ?: return
+        val eff = effectiveBrightness()
+        lp.screenBrightness =
+            if (eff in 0f..1f) eff else WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        window?.attributes = lp
+    }
+
+    /**
+     * Resolved screen brightness combining the manual override with night
+     * auto-dim. During the night window the screen is forced very dim (and
+     * never brighter than a manual override, if one is set). Returns -1 to mean
+     * "leave the system default".
+     */
+    private fun effectiveBrightness(): Float {
+        val override = prefs.getFloat(getString(R.string.pref_key_brightness), -1f)
+        val night = isNightDimActive()
+        val nightLevel = 0.06f
+        return when {
+            night && override in 0f..1f -> minOf(override, nightLevel)
+            night -> nightLevel
+            override in 0f..1f -> override
+            else -> -1f
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Night auto-dim scheduler
+    // ------------------------------------------------------------------
+
+    // The dream runs for hours, so the night window can begin or end mid-dream.
+    // Re-evaluate brightness + the clock's dimmed styling once a minute.
+    private val dimHandler = Handler(Looper.getMainLooper())
+    private val dimRunnable = object : Runnable {
+        override fun run() {
+            if (!::prefs.isInitialized) return
+            applyBrightnessOverride()
+            if (::clockDisplay.isInitialized) {
+                clockDisplay.dimmed =
+                    prefs.getBoolean(getString(R.string.pref_key_oled_mode), false) || isNightDimActive()
+            }
+            dimHandler.postDelayed(this, 60_000L)
+        }
+    }
+
+    private fun startDimScheduler() {
+        dimHandler.removeCallbacks(dimRunnable)
+        dimHandler.postDelayed(dimRunnable, 60_000L)
+    }
+
+    private fun stopDimScheduler() {
+        dimHandler.removeCallbacks(dimRunnable)
     }
 }

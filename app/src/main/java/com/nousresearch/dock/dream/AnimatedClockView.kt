@@ -44,7 +44,7 @@ import kotlin.math.sin
 class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
     enum class ClockStyle {
-        DEFAULT, BUBBLY, NEON, MONO, GRADIENT, OUTLINE
+        DEFAULT, BUBBLY, NEON, MONO, GRADIENT, OUTLINE, BUBBLE
     }
 
     var clockStyle: ClockStyle = ClockStyle.DEFAULT
@@ -129,6 +129,9 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
 
     /** Paint used to composite the cached neon glow bitmap (tinted per frame). */
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+
+    /** Paint for the BUBBLE style's colon dots. */
+    private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     private var displayText = ""
     private var prevText = ""
@@ -227,6 +230,9 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
             ClockStyle.BUBBLY -> startBubblyPulse()
             ClockStyle.NEON -> startNeonHueCycle()
             ClockStyle.GRADIENT -> startGradientSweep()
+            // BUBBLE reuses the gradient-phase animator to drive both its
+            // shimmering gradient and the gentle idle bob of the colon dots.
+            ClockStyle.BUBBLE -> startGradientSweep()
             else -> { /* Classic / Mono / Outline are intentionally still */ }
         }
     }
@@ -315,6 +321,7 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         val extra = when (clockStyle) {
             ClockStyle.NEON -> clockSize * 0.5f
             ClockStyle.BUBBLY -> clockSize * 0.2f
+            ClockStyle.BUBBLE -> clockSize * 0.22f
             ClockStyle.GRADIENT -> clockSize * 0.1f
             ClockStyle.OUTLINE -> 3f * density
             else -> 0f
@@ -360,6 +367,7 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
             ClockStyle.NEON -> drawNeon(canvas, cx, textY)
             ClockStyle.GRADIENT -> drawGradient(canvas, cx, cy, textY)
             ClockStyle.OUTLINE -> drawOutline(canvas, cx, textY)
+            ClockStyle.BUBBLE -> drawBubble(canvas, cx, cy, textY)
         }
     }
 
@@ -469,6 +477,85 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
     }
 
     /**
+     * iOS StandBy-inspired style: heavy rounded numerals filled with a vivid
+     * horizontal gradient, and the colon drawn as two soft dots. Each element
+     * (HH, mm, and both dots) wobbles independently — a gentle idle bob at rest
+     * and a springy bounce on shake, so it feels like floating bubbles.
+     */
+    private fun drawBubble(canvas: Canvas, cx: Float, cy: Float, textY: Float) {
+        if (displayText.length < 5) { drawPlain(canvas, cx, textY); return }
+        val hh = displayText.substring(0, 2)
+        val mm = displayText.substring(3, 5)
+
+        // Heavy, rounded numerals (fake-rounded via a thick round stroke fused
+        // to the fill — no bundled font required).
+        paint.style = Paint.Style.FILL_AND_STROKE
+        paint.strokeJoin = Paint.Join.ROUND
+        paint.strokeCap = Paint.Cap.ROUND
+        paint.strokeWidth = clockSize * 0.045f
+        paint.textAlign = Paint.Align.LEFT
+
+        val hhW = paint.measureText(hh)
+        val mmW = paint.measureText(mm)
+        val dotR = clockSize * 0.085f
+        val gap = dotR * 3.4f
+        val totalW = hhW + gap + mmW
+        val startX = cx - totalW / 2f
+
+        val (c1, c2) = bubbleGradientColors()
+        paint.shader = LinearGradient(startX, 0f, startX + totalW, 0f, c1, c2, Shader.TileMode.CLAMP)
+
+        val wHH = bubbleWobble(0f, clockSize * 0.05f)
+        canvas.drawText(hh, startX + wHH.first, textY + wHH.second, paint)
+        val wMM = bubbleWobble(2.4f, clockSize * 0.05f)
+        canvas.drawText(mm, startX + hhW + gap + wMM.first, textY + wMM.second, paint)
+        paint.shader = null
+
+        // Colon = two dots that bounce hardest on shake.
+        val dotCx = startX + hhW + gap / 2f
+        dotPaint.color = bubbleDotColor()
+        val wTop = bubbleWobble(1.1f, clockSize * 0.09f)
+        val wBot = bubbleWobble(3.7f, clockSize * 0.09f)
+        canvas.drawCircle(dotCx + wTop.first, cy - dotR * 1.5f + wTop.second, dotR, dotPaint)
+        canvas.drawCircle(dotCx + wBot.first, cy + dotR * 1.5f + wBot.second, dotR, dotPaint)
+
+        // Restore shared paint defaults for the next frame/style.
+        paint.style = Paint.Style.FILL
+        paint.strokeWidth = 0f
+        paint.textAlign = Paint.Align.CENTER
+    }
+
+    /**
+     * Per-element offset for BUBBLE: a slow idle bob (driven by the gradient
+     * phase animator) plus a springy shake response when the device is moved.
+     */
+    private fun bubbleWobble(phase: Float, amp: Float): Pair<Float, Float> {
+        val idle = sin(gradientPhase * 6.2832f + phase) * (clockSize * 0.012f)
+        if (shakeOffsetX == 0f && shakeOffsetY == 0f) return Pair(0f, idle)
+        val t = (System.currentTimeMillis() * 0.012).toFloat()
+        val sx = shakeOffsetX * sin(t + phase) * amp
+        val sy = shakeOffsetY * sin(t * 0.8f + phase) * amp
+        return Pair(sx, idle + sy)
+    }
+
+    private fun bubbleGradientColors(): Pair<Int, Int> {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(clockColor, hsv)
+        val s = maxOf(hsv[1], 0.75f)
+        val v = if (dimmed) minOf(hsv[2], 0.6f) else maxOf(hsv[2], 0.9f)
+        val h = hsv[0]
+        val c1 = Color.HSVToColor(floatArrayOf((h - 28f + 360f) % 360f, s, v))
+        val c2 = Color.HSVToColor(floatArrayOf((h + 28f) % 360f, s, v))
+        return Pair(c1, c2)
+    }
+
+    private fun bubbleDotColor(): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(clockColor, hsv)
+        return Color.HSVToColor(floatArrayOf(hsv[0], hsv[1] * 0.2f, if (dimmed) 0.55f else 0.92f))
+    }
+
+    /**
      * Draws [displayText] with the active paint, layering the brief
      * slide/fade time-change animation when one is in progress.
      */
@@ -549,6 +636,7 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
             ClockStyle.MONO -> Typeface.MONOSPACE
             ClockStyle.GRADIENT -> Typeface.create(base, Typeface.BOLD)
             ClockStyle.BUBBLY -> Typeface.create(base, Typeface.BOLD)
+            ClockStyle.BUBBLE -> Typeface.create(base, Typeface.BOLD)
             else -> base
         }
     }

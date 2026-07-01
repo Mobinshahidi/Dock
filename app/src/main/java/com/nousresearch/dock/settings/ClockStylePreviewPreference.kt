@@ -90,6 +90,7 @@ class ClockStylePreviewPreference @JvmOverloads constructor(
 
         val style = prefs.getString(context.getString(R.string.pref_key_clock_style), "default") ?: "default"
         v.clockStyle = when (style) {
+            "bubble" -> AnimatedClockView.ClockStyle.BUBBLE
             "bubbly" -> AnimatedClockView.ClockStyle.BUBBLY
             "neon" -> AnimatedClockView.ClockStyle.NEON
             "mono" -> AnimatedClockView.ClockStyle.MONO
