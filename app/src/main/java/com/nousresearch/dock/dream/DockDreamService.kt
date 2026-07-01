@@ -28,7 +28,6 @@ import com.nousresearch.dock.R
 import com.nousresearch.dock.slideshow.PhotoSlideshowManager
 import com.nousresearch.dock.widget.WidgetHostManager
 import java.util.Calendar
-import kotlin.math.minOf
 import kotlin.math.sqrt
 
 /**
@@ -261,8 +260,7 @@ class DockDreamService : DreamService() {
             val availW = clockContainer.width -
                 clockContainer.paddingLeft - clockContainer.paddingRight
             if (availW > 0) {
-                clockDisplay.clockSize = minOf(
-                    clockDisplay.clockSize,
+                clockDisplay.clockSize = clockDisplay.clockSize.coerceAtMost(
                     clockDisplay.computeFittingTextSize(availW)
                 )
             }

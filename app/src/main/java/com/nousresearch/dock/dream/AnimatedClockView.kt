@@ -12,6 +12,7 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.os.Handler
@@ -376,6 +377,7 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         val hPad = paint.textSize * 0.2f
         val startX = cx - totalWidth / 2f
         val capTop = height / 2f - capH / 2f
+        val capsulePaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
         // Each digit drawn inside its own rounded capsule. The capsule uses a
         // very subtle gradient fill (barely lighter than the background) and a
@@ -383,13 +385,12 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         var x = startX
         for (i in chars.indices) {
             val cw = charWidths[i]
-            val bw = cw + hPad * 2
 
             // Shake per-digit using a sine offset derived from shakeOffset
             val wobble = if (shakeOffsetX != 0f || shakeOffsetY != 0f) {
                 val phase = i * 1.2f
-                val inAng = sin(System.currentTimeMillis() * 0.008 + phase)
-                val outAng = sin(System.currentTimeMillis() * 0.006 + phase)
+                val inAng = sin((System.currentTimeMillis() * 0.008).toFloat() + phase)
+                val outAng = sin((System.currentTimeMillis() * 0.006).toFloat() + phase)
                 Pair(shakeOffsetX * inAng * 4f, shakeOffsetY * outAng * 4f)
             } else Pair(0f, 0f)
 
@@ -397,17 +398,17 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
             val ry = capTop + wobble.second
 
             // Capsule background
-            bgPaint.color = clockColor
-            bgPaint.alpha = 18
+            capsulePaint.color = clockColor
+            capsulePaint.alpha = 18
             val rect = RectF(rx - hPad, ry, rx + cw + hPad, ry + capH)
-            canvas.drawRoundRect(rect, corner, corner, bgPaint)
+            canvas.drawRoundRect(rect, corner, corner, capsulePaint)
 
             // Capsule border
-            bgPaint.alpha = 50
-            bgPaint.style = Paint.Style.STROKE
-            bgPaint.strokeWidth = 1.2f * density
-            canvas.drawRoundRect(rect, corner, corner, bgPaint)
-            bgPaint.style = Paint.Style.FILL
+            capsulePaint.alpha = 50
+            capsulePaint.style = Paint.Style.STROKE
+            capsulePaint.strokeWidth = 1.2f * density
+            canvas.drawRoundRect(rect, corner, corner, capsulePaint)
+            capsulePaint.style = Paint.Style.FILL
 
             // Digit
             val digit = String(charArrayOf(chars[i]))
@@ -476,7 +477,7 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         val shakeX: Float
         val shakeY: Float
         if (shakeOffsetX != 0f || shakeOffsetY != 0f) {
-            val t = System.currentTimeMillis() * 0.01
+            val t = (System.currentTimeMillis() * 0.01).toFloat()
             shakeX = shakeOffsetX * sin(t) * 3f
             shakeY = shakeOffsetY * sin(t * 0.7f) * 3f
         } else {
