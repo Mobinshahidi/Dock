@@ -8,6 +8,10 @@ import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.net.Uri
 import android.os.BatteryManager
 import android.service.dreams.DreamService
@@ -24,6 +28,8 @@ import com.nousresearch.dock.R
 import com.nousresearch.dock.slideshow.PhotoSlideshowManager
 import com.nousresearch.dock.widget.WidgetHostManager
 import java.util.Calendar
+import kotlin.math.minOf
+import kotlin.math.sqrt
 
 /**
  * Dock dream service — the charging screensaver.
@@ -58,6 +64,36 @@ class DockDreamService : DreamService() {
 
     // Battery receiver
     private var batteryReceiver: BroadcastReceiver? = null
+
+    // Shake / accelerometer
+    private var sensorManager: SensorManager? = null
+    private var lastShakeMs = 0L
+
+    private val shakeListener = object : SensorEventListener {
+        private val SHAKE_THRESHOLD = 12f
+        override fun onSensorChanged(event: SensorEvent) {
+            if (event.sensor.type != Sensor.TYPE_ACCELEROMETER) return
+            val x = event.values[0]
+            val y = event.values[1]
+            val z = event.values[2]
+            val magnitude = sqrt(x * x + y * y + z * z) - SensorManager.GRAVITY_EARTH
+            if (magnitude > SHAKE_THRESHOLD) {
+                lastShakeMs = System.currentTimeMillis()
+            }
+            // Smooth time-based decay: full impact for 100ms, then linear
+            // fade to zero over ~1.9s.
+            val elapsed = System.currentTimeMillis() - lastShakeMs
+            val decay = when {
+                elapsed > 2000 -> 0f
+                elapsed > 100  -> 1f - (elapsed - 100) / 1900f
+                else           -> 1f
+            }
+            clockDisplay.shakeOffsetX = decay * (x / 20f)
+            clockDisplay.shakeOffsetY = decay * (y / 20f)
+            if (decay > 0.01f) clockDisplay.postInvalidate()
+        }
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    }
 
     // Managers (lazy — Service context not valid during construction)
     private lateinit var slideshowManager: PhotoSlideshowManager
@@ -108,6 +144,7 @@ class DockDreamService : DreamService() {
         loadModuleStates()
         applyClockPosition()
         applyClockCustomization()
+        registerSensor()
         clockDisplay.start()
         registerBatteryReceiver()
         startSlideshowIfEnabled()
@@ -117,6 +154,7 @@ class DockDreamService : DreamService() {
     override fun onDreamingStopped() {
         super.onDreamingStopped()
         clockDisplay.stop()
+        unregisterSensor()
         unregisterBatteryReceiver()
         slideshowManager.stop()
         widgetHostManager.stop()
@@ -217,6 +255,19 @@ class DockDreamService : DreamService() {
         val baseClockSize = resources.getDimension(R.dimen.clock_text_size)
         clockDisplay.clockSize = baseClockSize * clockPercent / 100f
 
+        // Responsive: cap clockSize so it never overflows the clockContainer.
+        // Post a one-shot measurement after layout pass.
+        clockDisplay.post {
+            val availW = clockContainer.width -
+                clockContainer.paddingLeft - clockContainer.paddingRight
+            if (availW > 0) {
+                clockDisplay.clockSize = minOf(
+                    clockDisplay.clockSize,
+                    clockDisplay.computeFittingTextSize(availW)
+                )
+            }
+        }
+
         try {
             val textColor = Color.parseColor(colorHex)
             clockDisplay.clockColor = textColor
@@ -290,6 +341,11 @@ class DockDreamService : DreamService() {
 
         // Battery visibility
         batteryStatus.visibility = if (batteryEnabled) View.VISIBLE else View.GONE
+        if (batteryEnabled) {
+            val batteryPct = prefs.getInt(getString(R.string.pref_key_battery_font_size), 100)
+            batteryStatus.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP,
+                12f * batteryPct / 100f)
+        }
 
         // Slideshow
         slideshowManager.setEnabled(slideshowEnabled)
@@ -312,12 +368,9 @@ class DockDreamService : DreamService() {
             override fun onReceive(context: Context, intent: Intent) {
                 val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
                 val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-                val plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0)
                 val pct = if (level >= 0 && scale > 0) (level * 100 / scale) else -1
-                val charging = plugged != 0
                 if (pct >= 0) {
-                    val icon = if (charging) "\u26A1" else ""
-                    batteryStatus.text = "$icon $pct%"
+                    batteryStatus.text = "$pct%"
                 }
             }
         }
@@ -328,6 +381,24 @@ class DockDreamService : DreamService() {
         batteryReceiver?.let {
             try { unregisterReceiver(it) } catch (_: Exception) {}
             batteryReceiver = null
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Shake / accelerometer sensor
+    // ------------------------------------------------------------------
+
+    private fun registerSensor() {
+        sensorManager = getSystemService(SENSOR_SERVICE) as? SensorManager
+        sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { accel ->
+            sensorManager?.registerListener(shakeListener, accel, SensorManager.SENSOR_DELAY_NORMAL)
+        }
+    }
+
+    private fun unregisterSensor() {
+        sensorManager?.also {
+            try { it.unregisterListener(shakeListener) } catch (_: Exception) {}
+            sensorManager = null
         }
     }
 

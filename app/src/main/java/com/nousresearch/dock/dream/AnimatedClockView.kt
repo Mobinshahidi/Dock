@@ -24,6 +24,7 @@ import android.view.animation.LinearInterpolator
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.sin
 
 /**
  * Custom-drawn HH:mm clock with per-second ticking, a 400ms time-change
@@ -94,6 +95,28 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         }
 
     var animEnabled: Boolean = true
+
+    /** Applied by DockDreamService from accelerometer data — per-digit wobble offset. */
+    var shakeOffsetX: Float = 0f
+    var shakeOffsetY: Float = 0f
+
+    /**
+     * Measure "HH:mm" at various sizes and return the largest that fits
+     * within [availableWidth] pixels.  Called from DockDreamService after
+     * the layout pass so [clockContainer] dimensions are known.
+     */
+    fun computeFittingTextSize(availableWidth: Int): Float {
+        val text = if (displayText.isNotEmpty()) displayText else "88:88"
+        var lo = 8f
+        var hi = clockSize
+        while (hi - lo > 1f) {
+            val mid = (lo + hi) / 2f
+            paint.textSize = mid
+            if (paint.measureText(text) <= availableWidth) lo = mid else hi = mid
+        }
+        paint.textSize = clockSize // restore
+        return lo
+    }
 
     private val density = resources.displayMetrics.density
 
@@ -344,16 +367,65 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
     }
 
     private fun drawBubbly(canvas: Canvas, cx: Float, textY: Float) {
-        // Fake-round any font: a thick rounded stroke fused to the fill gives
-        // a plump, playful look without bundling a custom .ttf.
-        paint.style = Paint.Style.FILL_AND_STROKE
-        paint.strokeJoin = Paint.Join.ROUND
-        paint.strokeCap = Paint.Cap.ROUND
-        paint.strokeWidth = clockSize * 0.06f
-        val shadowAlpha = if (dimmed) 0x33 else 0x66
-        paint.setShadowLayer(clockSize * 0.06f, 0f, clockSize * 0.03f, (shadowAlpha shl 24))
-        drawTextWithAnim(canvas, cx, textY)
-        paint.clearShadowLayer()
+        val chars = displayText.toCharArray()
+        val charWidths = FloatArray(chars.size)
+        paint.getTextWidths(displayText, charWidths)
+        val totalWidth = charWidths.sum()
+        val capH = paint.textSize * 1.35f
+        val corner = capH * 0.45f
+        val hPad = paint.textSize * 0.2f
+        val startX = cx - totalWidth / 2f
+        val capTop = height / 2f - capH / 2f
+
+        // Each digit drawn inside its own rounded capsule. The capsule uses a
+        // very subtle gradient fill (barely lighter than the background) and a
+        // thin border. When shake is active, each digit independently wavers.
+        var x = startX
+        for (i in chars.indices) {
+            val cw = charWidths[i]
+            val bw = cw + hPad * 2
+
+            // Shake per-digit using a sine offset derived from shakeOffset
+            val wobble = if (shakeOffsetX != 0f || shakeOffsetY != 0f) {
+                val phase = i * 1.2f
+                val inAng = sin(System.currentTimeMillis() * 0.008 + phase)
+                val outAng = sin(System.currentTimeMillis() * 0.006 + phase)
+                Pair(shakeOffsetX * inAng * 4f, shakeOffsetY * outAng * 4f)
+            } else Pair(0f, 0f)
+
+            val rx = x + wobble.first
+            val ry = capTop + wobble.second
+
+            // Capsule background
+            bgPaint.color = clockColor
+            bgPaint.alpha = 18
+            val rect = RectF(rx - hPad, ry, rx + cw + hPad, ry + capH)
+            canvas.drawRoundRect(rect, corner, corner, bgPaint)
+
+            // Capsule border
+            bgPaint.alpha = 50
+            bgPaint.style = Paint.Style.STROKE
+            bgPaint.strokeWidth = 1.2f * density
+            canvas.drawRoundRect(rect, corner, corner, bgPaint)
+            bgPaint.style = Paint.Style.FILL
+
+            // Digit
+            val digit = String(charArrayOf(chars[i]))
+            if (animFraction < 1f && i < 2 && prevText.length > i && prevText[i] != chars[i]) {
+                val oldAlpha = paint.alpha
+                paint.alpha = (oldAlpha * (1f - animFraction)).coerceIn(0f, 255f).toInt()
+                canvas.drawText(String(charArrayOf(prevText[i])), x + cw / 2f + wobble.first,
+                    textY + wobble.second - (1f - animFraction) * 30f, paint)
+                paint.alpha = (oldAlpha * animFraction).coerceIn(0f, 255f).toInt()
+                canvas.drawText(digit, x + cw / 2f + wobble.first,
+                    textY + wobble.second + (1f - animFraction) * 30f, paint)
+                paint.alpha = oldAlpha
+            } else {
+                canvas.drawText(digit, x + cw / 2f + wobble.first,
+                    textY + wobble.second, paint)
+            }
+            x += cw + hPad * 2
+        }
     }
 
     private fun drawNeon(canvas: Canvas, cx: Float, textY: Float) {
@@ -401,15 +473,28 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
      */
     private fun drawTextWithAnim(canvas: Canvas, cx: Float, textY: Float) {
         val oldAlpha = paint.alpha
+        val shakeX: Float
+        val shakeY: Float
+        if (shakeOffsetX != 0f || shakeOffsetY != 0f) {
+            val t = System.currentTimeMillis() * 0.01
+            shakeX = shakeOffsetX * sin(t) * 3f
+            shakeY = shakeOffsetY * sin(t * 0.7f) * 3f
+        } else {
+            shakeX = 0f
+            shakeY = 0f
+        }
+        val drawCx = cx + shakeX
+        val drawTextY = textY + shakeY
+
         if (animFraction < 1f && prevText.isNotEmpty()) {
             val slide = (1f - animFraction) * 40f
             paint.alpha = (oldAlpha * (1f - animFraction)).coerceIn(0f, 255f).toInt()
-            canvas.drawText(prevText, cx, textY - slide, paint)
+            canvas.drawText(prevText, drawCx, drawTextY - slide, paint)
             paint.alpha = (oldAlpha * animFraction).coerceIn(0f, 255f).toInt()
-            canvas.drawText(displayText, cx, textY + slide, paint)
+            canvas.drawText(displayText, drawCx, drawTextY + slide, paint)
             paint.alpha = oldAlpha
         } else {
-            canvas.drawText(displayText, cx, textY, paint)
+            canvas.drawText(displayText, drawCx, drawTextY, paint)
         }
     }
 

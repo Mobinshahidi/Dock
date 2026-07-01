@@ -113,6 +113,13 @@
         android:summary="@string/pref_battery_summary"
         android:defaultValue="true" />
 
+    <SeekBarPreference
+        android:key="@string/pref_key_battery_font_size"
+        android:title="@string/pref_battery_size_title"
+        android:summary="@string/pref_battery_size_summary"
+        android:max="200"
+        android:defaultValue="100" />
+
     <!-- ===== Slideshow ===== -->
     <PreferenceCategory
         android:title="@string/section_slideshow"

@@ -77,6 +77,9 @@
     <string name="pref_key_battery_enabled">battery_enabled</string>
     <string name="pref_battery_title">Show battery status</string>
     <string name="pref_battery_summary">Display battery level and charging status</string>
+    <string name="pref_key_battery_font_size">battery_font_size</string>
+    <string name="pref_battery_size_title">Battery text size</string>
+    <string name="pref_battery_size_summary">Adjust the text size of the battery percentage</string>
     <string name="pref_key_transition_animation">transition_animation</string>
     <string name="pref_transition_title">Digit transition animation</string>
     <string name="pref_transition_summary">Animate digits when the minute changes</string>
